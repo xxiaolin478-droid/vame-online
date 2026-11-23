@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>声優共演カードバトル ONLINE</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --primary: #1d4ed8;
+      --primary-hover: #1e40af;
+      --accent: #f59e0b;
+      --danger: #dc2626;
+      --success: #16a34a;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #cbd5e1;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #0f172a;
+      color: #fff;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      letter-spacing: 0.05em;
+    }
+
+    .badge {
+      background: var(--primary);
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+
+    main {
+      max-width: 960px;
+      width: 100%;
+      margin: 16px auto;
+      padding: 0 12px;
+      flex: 1;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .card-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+
+    h2 {
+      font-size: 1.05rem;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--primary);
+      padding-left: 8px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 720px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-row {
+      margin-bottom: 10px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #334155;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: 0.15s;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      width: 100%;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #111;
+      width: 100%;
+    }
+
+    .btn-outline {
+      background: #fff;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    .ai-item {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+
+    .lobby-list {
+      list-style: none;
+      margin: 10px 0;
+    }
+
+    .lobby-list li {
+      padding: 8px 12px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ゲーム画面 */
+    .status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+
+    .players-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .p-chip {
+      background: #fff;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+    }
+
+    .p-chip.active {
+      border-color: var(--accent);
+      background: #fffbeb;
+      font-weight: bold;
+    }
+
+    .p-chip.finished {
+      opacity: 0.6;
+      background: #e2e8f0;
+    }
+
+    .cards-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .actor-card {
+      position: relative;
+      background: #fff;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      min-width: 130px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.1s, border-color 0.1s;
+      user-select: none;
+    }
+
+    .actor-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .actor-card.selected {
+      border-color: var(--accent);
+      background: #fef3c7;
+    }
+
+    .actor-card.field-card {
+      background: #eff6ff;
+      border-color: #93c5fd;
+    }
+
+    .key-badge {
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      background: #0f172a;
+      color: #fff;
+      font-size: 0.72rem;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .anime-choice {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .anime-choice:hover {
+      background: #eff6ff;
+      border-color: var(--primary);
+    }
+
+    .log-box {
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 0.85rem;
+      padding: 10px;
+      border-radius: 8px;
+      height: 150px;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+
+    .key-guide {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .alert-msg {
+      color: var(--danger);
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin-top: 6px;
+    }
+
+    .result-btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .result-btn-group .btn {
+      flex: 1;
+      min-width: 200px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>🎙️ 声優共演カードバトル ONLINE</h1>
+    <span class="badge" id="connBadge">接続中...</span>
+  </header>
+
+  <main>
+    <!-- ========== ホーム画面 ========== -->
+    <div id="homeView">
+      <div class="card-box">
+        <h2>プレイヤー情報</h2>
+        <div class="form-row">
+          <label>あなたのプレイヤーネーム</label>
+          <input type="text" id="playerNameInput" value="プレイヤー" maxlength="16" />
+        </div>
+      </div>
+
+      <div class="grid-2" id="setupPanels">
+        <!-- ルーム作成 -->
+        <div class="card-box">
+          <h2>ルームを作成（ゲームマスター）</h2>
+          <div class="form-row">
+            <label>ゲームモード</label>
+            <select id="endlessSelect" onchange="toggleExtraRow()">
+              <option value="0">通常モード（手札を0枚にしたら勝利）</option>
+              <option value="1">エンドレスモード（上限枚数到達まで継続）</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>初期手札枚数</label>
+            <input type="number" id="startHandInput" value="5" min="1" max="15" />
+          </div>
+          <div class="form-row hidden" id="extraCardRow">
+            <label>取得可能枚数（初期＋この枚数で終了）</label>
+            <input type="number" id="extraCardInput" value="3" min="1" max="20" />
+          </div>
+          <div class="form-row">
+            <label>使用する声優数（最大: <span id="maxActorSpan">-</span>名）</label>
+            <input type="number" id="actorLimitInput" value="50" min="4" />
+          </div>
+          <div class="form-row">
+            <label>AIプレイヤー人数（0〜7人）</label>
+            <input type="number" id="aiCountInput" value="1" min="0" max="7" onchange="renderAiConfigs()" />
+          </div>
+          <div id="aiConfigContainer"></div>
+          <button class="btn btn-primary" onclick="createRoom()">ルームを作成する</button>
+        </div>
+
+        <!-- ルーム参加 -->
+        <div class="card-box">
+          <h2>ルームに参加（ゲスト）</h2>
+          <div class="form-row">
+            <label>ルームID（5桁の数字）</label>
+            <input type="text" id="joinRoomIdInput" placeholder="例: 12345" maxlength="5" />
+          </div>
+          <button class="btn btn-accent" onclick="joinRoom()">ルームに参加する</button>
+          <p class="alert-msg" id="homeError"></p>
+        </div>
+      </div>
+
+      <!-- 待機ロビー -->
+      <div class="card-box hidden" id="lobbyPanel">
+        <h2>対戦ロビー（ルームID: <span id="lobbyRoomId" style="color:var(--primary);font-size:1.3rem;"></span>）</h2>
+        <p style="font-size:0.85rem;color:var(--muted);margin-bottom:8px;">
+          ※ 参加者が揃ったらホストが開始してください。人間プレイヤーの順番はランダムにシャッフルされ、AIはその後に配置されます。
+        </p>
+        <ul class="lobby-list" id="lobbyMemberList"></ul>
+        <button class="btn btn-primary hidden" id="startGameBtn" onclick="startGame()">このメンバーでゲーム開始</button>
+        <p id="waitingHostText" style="text-align:center;color:var(--muted);font-weight:bold;">ホストの開始を待っています...</p>
+      </div>
+    </div>
+
+    <!-- ========== ゲーム画面 ========== -->
+    <div id="gameView" class="hidden">
+      <div class="status-bar">
+        <div>
+          <strong>第<span id="matchNum">1</span>戦 ／ 🌀 <span id="turnNum">1</span>巡目</strong> ｜
+          山札: <span id="deckNum">0</span>枚 (リフル <span id="refillNum">0/10</span>)
+        </div>
+        <div id="turnBanner" style="font-weight:bold;color:#fbbf24;"></div>
+      </div>
+
+      <div class="players-strip" id="playersStrip"></div>
+
+      <!-- 場のカード -->
+      <div class="card-box">
+        <h2>🧠 場のカード（重ねる対象）</h2>
+        <div class="cards-row" id="fieldCardsRow"></div>
+      </div>
+
+      <!-- 自分の操作エリア -->
+      <div class="card-box" id="actionPanel">
+        <h2 id="stepTitle">🎴 あなたの手札</h2>
+        <div class="cards-row" id="handCardsRow"></div>
+        <div id="animeSelectArea" class="hidden" style="margin-top:12px;"></div>
+        <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;" id="controlButtons"></div>
+        <p class="alert-msg" id="gameAlert"></p>
+        <p class="key-guide">⌨️ キーボード操作: [1]〜[9] 選択 / [0] スキップ / [Esc] 選択解除</p>
+      </div>
+
+      <!-- 対戦ログ -->
+      <div class="card-box">
+        <h2>📜 対戦ログ</h2>
+        <div class="log-box" id="logBox"></div>
+        <div id="resultActions" class="hidden">
+          <div class="result-btn-group">
+            <button class="btn btn-primary hidden" id="rematchBtn" onclick="restartGame()">🔄 同じメンバー・設定でもう一度プレイ</button>
+            <button class="btn btn-outline" onclick="location.reload()">ホームに戻る（ルーム解散）</button>
+          </div>
+          <p id="waitingRematchText" class="hidden"
+            style="text-align:center;color:var(--muted);font-weight:bold;margin-top:8px;">
+            ホストが次の試合を開始するのを待っています...
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const clientId = "c_" + Math.random().toString(36).slice(2, 10);
+    const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${wsProtocol}//${location.host}/ws`);
+
+    let state = null;
+    let uiStep = "SELECT_HAND"; // SELECT_HAND | SELECT_FIELD | SELECT_ANIME | SELECT_DISCARD
+    let selectedHandCard = null;
+    let selectedFieldIdx = null;
+    let currentAnimeOptions = [];
+
+    fetch("/api/meta").then(r => r.json()).then(d => {
+      document.getElementById("maxActorSpan").textContent = d.totalActors;
+      const inp = document.getElementById("actorLimitInput");
+      inp.max = d.totalActors;
+      inp.value = Math.min(50, d.totalActors);
+    });
+
+    function toggleExtraRow() {
+      const isEndless = document.getElementById("endlessSelect").value === "1";
+      document.getElementById("extraCardRow").classList.toggle("hidden", !isEndless);
+    }
+
+    function renderAiConfigs() {
+      const aiCount = Math.min(7, Math.max(0, parseInt(document.getElementById("aiCountInput").value) || 0));
+      const container = document.getElementById("aiConfigContainer");
+      container.innerHTML = "";
+      for (let i = 1; i <= aiCount; i++) {
+        container.innerHTML += `
+          <div class="ai-item">
+            <label>AI-${i} のアニメ知識率 (%)</label>
+            <input type="number" class="ai-pct-input" value="80" min="1" max="100" />
+          </div>
+        `;
+      }
+    }
+    renderAiConfigs();
+
+    ws.onopen = () => {
+      document.getElementById("connBadge").textContent = "オンライン接続済";
+      document.getElementById("connBadge").style.background = "#16a34a";
+    };
+    ws.onclose = () => {
+      document.getElementById("connBadge").textContent = "切断されました";
+      document.getElementById("connBadge").style.background = "#dc2626";
+    };
+
+    ws.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === "ERROR") {
+        document.getElementById("homeError").textContent = msg.message;
+        return;
+      }
+      if (msg.type === "ANIME_OPTIONS") {
+        if (msg.options.length === 0) {
+          document.getElementById("gameAlert").textContent = "❌ その2人の共演アニメは見つかりませんでした。";
+          uiStep = "SELECT_FIELD";
+          renderGame();
+          return;
+        }
+        document.getElementById("gameAlert").textContent = "";
+        currentAnimeOptions = msg.options;
+        uiStep = "SELECT_ANIME";
+        renderGame();
+        return;
+      }
+      if (msg.type === "STATE") {
+        const prevPid = state ? state.currentPid : -1;
+        const prevMatch = state ? state.matchCount : -1;
+        state = msg;
+        if (state.currentPid !== prevPid || state.matchCount !== prevMatch) {
+          resetSelection();
+        }
+        renderAll();
+      }
+    };
+
+    function resetSelection() {
+      uiStep = "SELECT_HAND";
+      selectedHandCard = null;
+      selectedFieldIdx = null;
+      currentAnimeOptions = [];
+      document.getElementById("gameAlert").textContent = "";
+    }
+
+    function createRoom() {
+      const pctInputs = document.querySelectorAll(".ai-pct-input");
+      const aiList = Array.from(pctInputs).map((el, idx) => ({
+        name: `AI-${idx + 1}`,
+        pct: Math.min(100, Math.max(1, parseFloat(el.value) || 80))
+      }));
+
+      ws.send(JSON.stringify({
+        action: "CREATE_ROOM",
+        clientId,
+        playerName: document.getElementById("playerNameInput").value,
+        settings: {
+          endlessMode: document.getElementById("endlessSelect").value === "1",
+          startHandSize: parseInt(document.getElementById("startHandInput").value) || 5,
+          extraCard: parseInt(document.getElementById("extraCardInput").value) || 3,
+          actorLimit: parseInt(document.getElementById("actorLimitInput").value) || 50,
+          aiList
+        }
+      }));
+    }
+
+    function joinRoom() {
+      ws.send(JSON.stringify({
+        action: "JOIN_ROOM",
+        clientId,
+        roomId: document.getElementById("joinRoomIdInput").value,
+        playerName: document.getElementById("playerNameInput").value
+      }));
+    }
+
+    function startGame() {
+      ws.send(JSON.stringify({ action: "START_GAME" }));
+    }
+
+    function restartGame() {
+      ws.send(JSON.stringify({ action: "RESTART_GAME" }));
+    }
+
+    function renderAll() {
+      if (!state) return;
+      if (state.phase === "LOBBY") {
+        document.getElementById("homeView").classList.remove("hidden");
+        document.getElementById("gameView").classList.add("hidden");
+        document.getElementById("setupPanels").classList.add("hidden");
+        document.getElementById("lobbyPanel").classList.remove("hidden");
+        document.getElementById("lobbyRoomId").textContent = state.roomId;
+
+        const ul = document.getElementById("lobbyMemberList");
+        ul.innerHTML = "";
+        state.lobbyHumans.forEach(h => {
+          ul.innerHTML += `<li><span>👤 ${h.name}</span><span>${h.id === state.hostId ? "👑 ホスト" : "参加者"}</span></li>`;
+        });
+        state.aiConfigs.forEach(ai => {
+          ul.innerHTML += `<li><span>🤖 ${ai.name}</span><span>知識率 ${ai.pct}%</span></li>`;
+        });
+
+        const isHost = state.hostId === clientId;
+        document.getElementById("startGameBtn").classList.toggle("hidden", !isHost);
+        document.getElementById("waitingHostText").classList.toggle("hidden", isHost);
+      } else {
+        document.getElementById("homeView").classList.add("hidden");
+        document.getElementById("gameView").classList.remove("hidden");
+        renderGame();
+      }
+    }
+
+    function renderGame() {
+      document.getElementById("matchNum").textContent = state.matchCount;
+      document.getElementById("turnNum").textContent = state.turn;
+      document.getElementById("deckNum").textContent = state.deckCount;
+      document.getElementById("refillNum").textContent = `${state.refillCount}/${state.maxRefill}`;
+
+      const curP = state.players[state.currentPid];
+      const isMyTurn = state.phase === "PLAYING" && state.currentPid === state.myPid;
+      document.getElementById("turnBanner").textContent =
+        state.phase === "RESULT" ? "🏁 ゲーム終了" :
+          isMyTurn ? "🔥 あなたのターンです！" : `⏳ ${curP.name} の思考中...`;
+
+      // プレイヤー一覧
+      const strip = document.getElementById("playersStrip");
+      strip.innerHTML = "";
+      state.players.forEach(p => {
+        const cls = ["p-chip", p.pid === state.currentPid && state.phase === "PLAYING" ? "active" : "", p.finished ? "finished" : ""].join(" ");
+        const rankTxt = p.rank ? ` [${p.rank}位]` : "";
+        strip.innerHTML += `<div class="${cls}">${p.pid + 1}. ${p.name} (手札:${p.handCount}枚)${rankTxt}</div>`;
+      });
+
+      // 場のカード
+      const fieldRow = document.getElementById("fieldCardsRow");
+      fieldRow.innerHTML = "";
+      state.field.forEach((fc, idx) => {
+        const numBadge = (isMyTurn && uiStep === "SELECT_FIELD") ? `<span class="key-badge">${idx + 1}</span>` : "";
+        const selCls = (selectedFieldIdx === idx) ? "selected" : "";
+        fieldRow.innerHTML += `
+          <div class="actor-card field-card ${selCls}" onclick="onSelectField(${idx})">
+            ${numBadge}${fc}
+          </div>`;
+      });
+
+      // 自分の手札
+      const me = state.players[state.myPid];
+      const handRow = document.getElementById("handCardsRow");
+      handRow.innerHTML = "";
+      if (me) {
+        me.hand.forEach((hc, idx) => {
+          const showNum = isMyTurn && (uiStep === "SELECT_HAND" || uiStep === "SELECT_DISCARD");
+          const numBadge = showNum ? `<span class="key-badge">${idx + 1}</span>` : "";
+          const selCls = (selectedHandCard === hc) ? "selected" : "";
+          handRow.innerHTML += `
+            <div class="actor-card ${selCls}" onclick="onSelectHand(${idx})">
+              ${numBadge}${hc}
+            </div>`;
+        });
+      }
+
+      const stepTitle = document.getElementById("stepTitle");
+      const animeArea = document.getElementById("animeSelectArea");
+      const ctrlBtns = document.getElementById("controlButtons");
+      const resultActions = document.getElementById("resultActions");
+      animeArea.classList.add("hidden");
+      ctrlBtns.innerHTML = "";
+
+      if (state.phase === "RESULT") {
+        stepTitle.textContent = "🏆 最終結果・使用アニメ履歴";
+        let html = "";
+        state.players.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99)).forEach(p => {
+          html += `<p style="margin-bottom:6px;"><strong>${p.rank}位 ${p.name}:</strong> ${p.usedAnime.join(" / ") || "なし"}</p>`;
+        });
+        animeArea.innerHTML = html;
+        animeArea.classList.remove("hidden");
+
+        resultActions.classList.remove("hidden");
+        const isHost = state.hostId === clientId;
+        document.getElementById("rematchBtn").classList.toggle("hidden", !isHost);
+        document.getElementById("waitingRematchText").classList.toggle("hidden", isHost);
+      } else {
+        resultActions.classList.add("hidden");
+        if (!isMyTurn) {
+          stepTitle.textContent = "🎴 あなたの手札（相手のターン待機中）";
+        } else if (uiStep === "SELECT_HAND") {
+          stepTitle.textContent = "① 出す手札を選んでください（数字キー 1〜 / 0でスキップ）";
+          ctrlBtns.innerHTML = `<button class="btn btn-outline" onclick="triggerSkip()">[0] スキップ（手札交換）</button>`;
+        } else if (uiStep === "SELECT_FIELD") {
+          stepTitle.textContent = `② 『${selectedHandCard}』を重ねる場のカードを選んでください（1〜3）`;
+          ctrlBtns.innerHTML = `<button class="btn btn-outline" onclick="resetSelection();renderGame();">[Esc] 手札選択に戻る</button>`;
+        } else if (uiStep === "SELECT_ANIME") {
+          stepTitle.textContent = "③ 共演アニメを選んでください（数字キーで確定）";
+          let html = "";
+          currentAnimeOptions.forEach((opt, i) => {
+            html += `<button class="anime-choice" onclick="confirmPlay(${i})">
+              <strong>[${i + 1}] ${opt.anime}</strong>
+              <span style="color:var(--muted);font-size:0.85rem;">（${selectedHandCard}: ${opt.roleHand} ／ ${state.field[selectedFieldIdx]}: ${opt.roleField}）</span>
+            </button>`;
+          });
+          animeArea.innerHTML = html;
+          animeArea.classList.remove("hidden");
+          ctrlBtns.innerHTML = `<button class="btn btn-outline" onclick="uiStep='SELECT_FIELD';renderGame();">[Esc] 場の選択に戻る</button>`;
+        } else if (uiStep === "SELECT_DISCARD") {
+          stepTitle.textContent = "🗑 捨てる手札を選んでください（1枚引きます）";
+          ctrlBtns.innerHTML = `<button class="btn btn-outline" onclick="resetSelection();renderGame();">[Esc] キャンセル</button>`;
+        }
+      }
+
+      const logBox = document.getElementById("logBox");
+      logBox.innerHTML = state.logs.map(l => `<div>・${l}</div>`).join("");
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function onSelectHand(idx) {
+      if (!state || state.phase !== "PLAYING" || state.currentPid !== state.myPid) return;
+      const me = state.players[state.myPid];
+      if (!me || !me.hand[idx]) return;
+
+      if (uiStep === "SELECT_HAND") {
+        selectedHandCard = me.hand[idx];
+        uiStep = "SELECT_FIELD";
+        document.getElementById("gameAlert").textContent = "";
+        renderGame();
+      } else if (uiStep === "SELECT_DISCARD") {
+        ws.send(JSON.stringify({ action: "SKIP_TURN", mode: "EXCHANGE", discardIdx: idx }));
+        resetSelection();
+      }
+    }
+
+    function onSelectField(fIdx) {
+      if (!state || state.phase !== "PLAYING" || state.currentPid !== state.myPid) return;
+      if (uiStep !== "SELECT_FIELD") return;
+      selectedFieldIdx = fIdx;
+      ws.send(JSON.stringify({
+        action: "CHECK_ANIME",
+        handCard: selectedHandCard,
+        fieldCard: state.field[fIdx]
+      }));
+    }
+
+    function confirmPlay(optIdx) {
+      const opt = currentAnimeOptions[optIdx];
+      if (!opt) return;
+      ws.send(JSON.stringify({
+        action: "PLAY_CARD",
+        handCard: selectedHandCard,
+        fieldIdx: selectedFieldIdx,
+        anime: opt.anime
+      }));
+      resetSelection();
+    }
+
+    function triggerSkip() {
+      if (!state || state.phase !== "PLAYING" || state.currentPid !== state.myPid) return;
+      const me = state.players[state.myPid];
+      if (me.hand.length === 1) {
+        if (confirm("手札が1枚のため保持しますか？（OK: 保持してスキップ / キャンセル: 捨てて1枚引く）")) {
+          ws.send(JSON.stringify({ action: "SKIP_TURN", mode: "KEEP" }));
+        } else {
+          ws.send(JSON.stringify({ action: "SKIP_TURN", mode: "EXCHANGE", discardIdx: 0 }));
+        }
+        resetSelection();
+      } else {
+        uiStep = "SELECT_DISCARD";
+        renderGame();
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (document.activeElement.tagName === "INPUT") return;
+      if (!state || state.phase !== "PLAYING" || state.currentPid !== state.myPid) return;
+
+      if (e.key === "Escape") {
+        resetSelection();
+        renderGame();
+        return;
+      }
+      if (e.key === "0" && uiStep === "SELECT_HAND") {
+        triggerSkip();
+        return;
+      }
+      if (/^[1-9]$/.test(e.key)) {
+        const idx = parseInt(e.key) - 1;
+        if (uiStep === "SELECT_HAND" || uiStep === "SELECT_DISCARD") {
+          onSelectHand(idx);
+        } else if (uiStep === "SELECT_FIELD") {
+          onSelectField(idx);
+        } else if (uiStep === "SELECT_ANIME") {
+          confirmPlay(idx);
+        }
+      }
+    });
+  </script>
+</body>
+
+</html>
