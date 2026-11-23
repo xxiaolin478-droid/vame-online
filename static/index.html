@@ -399,11 +399,11 @@
           </div>
           <div class="form-row">
             <label>使用する声優数（最大: <span id="maxActorSpan">-</span>名）</label>
-            <input type="number" id="actorLimitInput" value="50" min="4" />
+            <input type="number" id="actorLimitInput" value="220" min="4" />
           </div>
           <div class="form-row">
-            <label>AIプレイヤー人数（0〜7人）</label>
-            <input type="number" id="aiCountInput" value="1" min="0" max="7" onchange="renderAiConfigs()" />
+            <label>AIプレイヤー人数（0〜20人）</label>
+            <input type="number" id="aiCountInput" value="0" min="0" max="20" onchange="renderAiConfigs()" />
           </div>
           <div id="aiConfigContainer"></div>
           <button class="btn btn-primary" onclick="createRoom()">ルームを作成する</button>
@@ -663,7 +663,7 @@
       document.getElementById("maxActorSpan").textContent = d.totalActors;
       const inp = document.getElementById("actorLimitInput");
       inp.max = d.totalActors;
-      inp.value = Math.min(50, d.totalActors);
+      inp.value = Math.min(220, d.totalActors);
     });
 
     function toggleExtraRow() {
