@@ -813,6 +813,9 @@
     const DEFAULT_AVATAR = "data:image/svg+xml;utf8," + encodeURIComponent(
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#cbd5e1"/><circle cx="32" cy="24" r="12" fill="#64748b"/><path d="M12 58c0-11 9-18 20-18s20 7 20 18" fill="#64748b"/></svg>`
     );
+    const AI_AVATAR = "data:image/svg+xml;utf8," + encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#1e293b"/><rect x="16" y="20" width="32" height="24" rx="6" fill="#38bdf8"/><circle cx="25" cy="32" r="3" fill="#0f172a"/><circle cx="39" cy="32" r="3" fill="#0f172a"/></svg>`
+    );
 
     let clientId = localStorage.getItem("va_client_id");
     if (!clientId) {
@@ -850,11 +853,7 @@
     let currentAnimeOptions = [];
 
     function getAvatarSrc(avatarStr, isAI = false) {
-      if (isAI) {
-        return "data:image/svg+xml;utf8," + encodeURIComponent(
-          `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#1e293b"/><rect x="16" y="20" width="32" height="24" rx="6" fill="#38bdf8"/><circle cx="25" cy="32" r="3" fill="#0f172a"/><circle cx="39" cy="32" r="3" fill="#0f172a"/></svg>`
-        );
-      }
+      if (isAI) return AI_AVATAR;
       return avatarStr || DEFAULT_AVATAR;
     }
 
@@ -1387,7 +1386,7 @@
       const isMyTurn = state.phase === "PLAYING" && state.currentPid === state.myPid;
       document.getElementById("turnBanner").textContent =
         state.phase === "RESULT" ? "🏁 ゲーム終了" :
-          isMyTurn ? "🔥 あなたのターンです！" : `⏳ ${curP.name} の思考中...`;
+          isMyTurn ? "🔥 あなたのターンです！" : `⏳ ${curP ? curP.name : ""} の思考中...`;
 
       const isEndlessEliminated =
         state.phase === "PLAYING" &&
@@ -1410,7 +1409,6 @@
           </div>`;
       });
 
-      // 場のカード（SELECT_FIELD / SELECT_ANIME のどちらでも番号を表示して上書き可能に）
       const canSelectField = isMyTurn && (uiStep === "SELECT_FIELD" || uiStep === "SELECT_ANIME");
       const fieldRow = document.getElementById("fieldCardsRow");
       fieldRow.innerHTML = "";
@@ -1423,8 +1421,6 @@
           </div>`;
       });
 
-      // 自分の手札（SELECT_DISCARD以外はいつでもクリックで手札選択を上書き可能）
-      const canSelectHand = isMyTurn && uiStep !== "SELECT_DISCARD";
       const showHandNum = isMyTurn && (uiStep === "SELECT_HAND" || uiStep === "SELECT_DISCARD");
       const handRow = document.getElementById("handCardsRow");
       handRow.innerHTML = "";
@@ -1507,7 +1503,6 @@
       logBox.scrollTop = logBox.scrollHeight;
     }
 
-    // 手札選択：SELECT_DISCARD 以外の全ステップで即座に上書き
     function onSelectHand(idx) {
       if (!state || state.phase !== "PLAYING" || state.currentPid !== state.myPid) return;
       const me = state.players[state.myPid];
@@ -1527,7 +1522,6 @@
       renderGame();
     }
 
-    // 場のカード選択：SELECT_FIELD でも SELECT_ANIME でも即座に上書きして再検索
     function onSelectField(fIdx) {
       if (!state || state.phase !== "PLAYING" || state.currentPid !== state.myPid) return;
       if (uiStep !== "SELECT_FIELD" && uiStep !== "SELECT_ANIME") return;
@@ -1588,7 +1582,8 @@
     }
 
     document.addEventListener("keydown", (e) => {
-      if (document.activeElement.tagName === "INPUT") return;
+      const tag = document.activeElement ? document.activeElement.tagName : "";
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (!state || state.phase !== "PLAYING" || state.currentPid !== state.myPid) return;
 
       if (e.key === "Escape") {
