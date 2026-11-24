@@ -108,7 +108,6 @@ def get_first_character(anime: str, actor: str) -> str:
 
 
 # --------- グローバル接続ユーザー管理 ---------
-# client_id -> {"id": str, "name": str, "ws": WebSocket, "room_id": Optional[str]}
 connected_users: Dict[str, dict] = {}
 
 
@@ -130,12 +129,34 @@ async def broadcast_online_users():
         {
             "id": u["id"],
             "name": u["name"],
+            "avatar": u.get("avatar", ""),
             "status": get_user_status(u),
         }
         for u in connected_users.values()
     ]
     payload = json.dumps({"type": "ONLINE_USERS", "users": user_list}, ensure_ascii=False)
     for u in list(connected_users.values()):
+        ws = u.get("ws")
+        if ws:
+            try:
+                await ws.send_text(payload)
+            except Exception:
+                pass
+
+
+async def broadcast_user_login_toast(login_client_id: str, name: str, avatar: str):
+    payload = json.dumps(
+        {
+            "type": "USER_LOGIN_NOTIFY",
+            "clientId": login_client_id,
+            "name": name,
+            "avatar": avatar,
+        },
+        ensure_ascii=False,
+    )
+    for cid, u in list(connected_users.items()):
+        if cid == login_client_id:
+            continue
         ws = u.get("ws")
         if ws:
             try:
@@ -185,6 +206,9 @@ class GameRoom:
                 return None
         return self.deck.pop()
 
+    def is_deck_completely_empty(self) -> bool:
+        return len(self.deck) == 0 and self.deck_refill_count >= self.max_refill
+
     def find_common_anime(self, v1: str, v2: str, pid: int) -> List[str]:
         if pid < 0 or pid >= len(self.players):
             return []
@@ -206,10 +230,10 @@ class GameRoom:
         limit = max(4, min(int(self.settings.get("actorLimit", len(all_actors))), len(all_actors)))
         self.voice_actors = all_actors[:limit]
 
-        # 最新の登録名に同期した上でシャッフル
         for h in self.lobby_humans:
             if h["id"] in connected_users:
                 h["name"] = connected_users[h["id"]]["name"]
+                h["avatar"] = connected_users[h["id"]].get("avatar", "")
 
         humans = [dict(h) for h in self.lobby_humans]
         random.shuffle(humans)
@@ -219,24 +243,28 @@ class GameRoom:
             self.players.append({
                 "id": h["id"],
                 "name": h["name"],
+                "avatar": h.get("avatar", ""),
                 "isAI": False,
                 "aiPct": 100,
                 "hand": [],
                 "usedAnime": [],
                 "finished": False,
                 "rank": None,
+                "leftRoom": False,
             })
 
         for idx, ai in enumerate(self.ai_configs):
             self.players.append({
                 "id": f"ai_{idx+1}",
                 "name": ai.get("name", f"AI-{idx+1}"),
+                "avatar": "",
                 "isAI": True,
                 "aiPct": float(ai.get("pct", 80)),
                 "hand": [],
                 "usedAnime": [],
                 "finished": False,
                 "rank": None,
+                "leftRoom": False,
             })
 
         self.ai_known_sets = {}
@@ -285,6 +313,7 @@ class GameRoom:
                 "pid": i,
                 "id": p["id"],
                 "name": p["name"],
+                "avatar": p.get("avatar", ""),
                 "isAI": p["isAI"],
                 "aiPct": p["aiPct"],
                 "handCount": len(p["hand"]),
@@ -292,6 +321,7 @@ class GameRoom:
                 "usedAnime": p["usedAnime"],
                 "finished": p["finished"],
                 "rank": p["rank"],
+                "leftRoom": p.get("leftRoom", False),
             })
 
         return {
@@ -322,6 +352,14 @@ class GameRoom:
                 pass
         await broadcast_online_users()
 
+    def finish_game_and_assign_ranks(self, reason_log: str):
+        active = [x for x in self.players if not x["finished"]]
+        for rem in active:
+            rem["finished"] = True
+            rem["rank"] = sum(1 for x in self.players if x["finished"])
+        self.phase = "RESULT"
+        self.add_log(reason_log)
+
     def check_victory_and_advance(self):
         endless = bool(self.settings.get("endlessMode", False))
         start_hand = int(self.settings.get("startHandSize", 5))
@@ -342,32 +380,34 @@ class GameRoom:
             if len(p["hand"]) >= end_limit and not p["finished"]:
                 p["finished"] = True
                 p["rank"] = sum(1 for x in self.players if x["finished"])
-                self.add_log(f"上限 {end_limit} 枚到達: {p['name']} が終了 ({p['rank']}位)")
+                self.add_log(f"💀 上限 {end_limit} 枚到達: {p['name']} が脱落 ({p['rank']}位)")
+
+            if self.is_deck_completely_empty():
+                self.finish_game_and_assign_ranks("📭 山札（リフル上限含む）がなくなったためゲーム終了！")
+                return
 
         active = [x for x in self.players if not x["finished"]]
         humans_active = [x for x in active if not x["isAI"]]
         if (n == 1 and len(active) == 0) or (n > 1 and (len(active) <= 1 or len(humans_active) == 0)):
-            for rem in active:
-                rem["finished"] = True
-                rem["rank"] = sum(1 for x in self.players if x["finished"])
-            self.phase = "RESULT"
-            self.add_log("=== ゲーム終了 ===")
+            self.finish_game_and_assign_ranks("=== ゲーム終了 ===")
             return
 
         for _ in range(n):
             next_pid = (self.current_pid + 1) % n
             if next_pid == 0:
                 if not self.acted_in_round:
-                    if self.deck:
+                    if not self.is_deck_completely_empty():
                         new_c = self.draw_card()
                         if new_c:
                             r_idx = random.randrange(len(self.field))
                             old_c = self.field[r_idx]
                             self.field[r_idx] = new_c
                             self.add_log(f"⏭️ 全員スキップ: 場の {old_c} に {new_c} を重ねました！")
-                    else:
-                        self.phase = "RESULT"
-                        self.add_log("手詰まりのためゲーム終了！")
+                    if self.is_deck_completely_empty() and endless:
+                        self.finish_game_and_assign_ranks("📭 山札（リフル上限含む）がなくなったためゲーム終了！")
+                        return
+                    elif self.is_deck_completely_empty() and not self.acted_in_round:
+                        self.finish_game_and_assign_ranks("手詰まりのためゲーム終了！")
                         return
                 self.turn += 1
                 self.acted_in_round = False
@@ -485,11 +525,15 @@ async def websocket_endpoint(ws: WebSocket):
             if action == "REGISTER_USER":
                 client_id = data["clientId"]
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
+                avatar = data.get("avatar", "")
+                is_first_login = bool(data.get("isFirstLogin", False))
+
                 existing = connected_users.get(client_id)
                 room_id = existing.get("room_id") if existing else None
                 connected_users[client_id] = {
                     "id": client_id,
                     "name": name,
+                    "avatar": avatar,
                     "ws": ws,
                     "room_id": room_id,
                 }
@@ -498,23 +542,30 @@ async def websocket_endpoint(ws: WebSocket):
                     for h in r.lobby_humans:
                         if h["id"] == client_id:
                             h["name"] = name
+                            h["avatar"] = avatar
                     if r.phase == "LOBBY":
                         await r.broadcast()
                 await broadcast_online_users()
+                if is_first_login:
+                    await broadcast_user_login_toast(client_id, name, avatar)
                 continue
 
-            if action == "UPDATE_NAME":
+            if action == "UPDATE_PROFILE":
                 client_id = data["clientId"]
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
+                avatar = data.get("avatar", "")
                 if client_id in connected_users:
                     connected_users[client_id]["name"] = name
+                    connected_users[client_id]["avatar"] = avatar
                 if current_room:
                     for h in current_room.lobby_humans:
                         if h["id"] == client_id:
                             h["name"] = name
+                            h["avatar"] = avatar
                     for p in current_room.players:
                         if p["id"] == client_id:
                             p["name"] = name
+                            p["avatar"] = avatar
                     await current_room.broadcast()
                 else:
                     await broadcast_online_users()
@@ -523,16 +574,18 @@ async def websocket_endpoint(ws: WebSocket):
             if action == "CREATE_ROOM":
                 client_id = data["clientId"]
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
+                avatar = data.get("avatar", "")
                 settings = data["settings"]
                 rid = gen_room_id()
                 room = GameRoom(rid, client_id, settings)
                 room.connections[client_id] = ws
-                room.lobby_humans.append({"id": client_id, "name": name})
+                room.lobby_humans.append({"id": client_id, "name": name, "avatar": avatar})
                 rooms[rid] = room
                 current_room = room
                 connected_users[client_id] = {
                     "id": client_id,
                     "name": name,
+                    "avatar": avatar,
                     "ws": ws,
                     "room_id": rid,
                 }
@@ -542,6 +595,7 @@ async def websocket_endpoint(ws: WebSocket):
                 client_id = data["clientId"]
                 rid = data.get("roomId", "").strip()
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
+                avatar = data.get("avatar", "")
                 room = rooms.get(rid)
                 if not room:
                     await ws.send_text(json.dumps({"type": "ERROR", "message": "ルームが見つかりません。"}, ensure_ascii=False))
@@ -556,33 +610,83 @@ async def websocket_endpoint(ws: WebSocket):
 
                 room.connections[client_id] = ws
                 if not any(h["id"] == client_id for h in room.lobby_humans):
-                    room.lobby_humans.append({"id": client_id, "name": name})
+                    room.lobby_humans.append({"id": client_id, "name": name, "avatar": avatar})
                 else:
                     for h in room.lobby_humans:
                         if h["id"] == client_id:
                             h["name"] = name
+                            h["avatar"] = avatar
                 current_room = room
                 connected_users[client_id] = {
                     "id": client_id,
                     "name": name,
+                    "avatar": avatar,
                     "ws": ws,
                     "room_id": rid,
                 }
                 await room.broadcast()
 
+            elif action == "LEAVE_ROOM":
+                client_id = data.get("clientId", client_id)
+                if current_room:
+                    if client_id in current_room.connections:
+                        del current_room.connections[client_id]
+                    current_room.lobby_humans = [
+                        h for h in current_room.lobby_humans if h["id"] != client_id
+                    ]
+
+                    was_current_turn = (
+                        current_room.phase == "PLAYING"
+                        and current_room.players[current_room.current_pid]["id"] == client_id
+                    )
+
+                    for p in current_room.players:
+                        if p["id"] == client_id:
+                            p["leftRoom"] = True
+                            if not p["finished"]:
+                                p["finished"] = True
+                                p["rank"] = sum(1 for x in current_room.players if x["finished"])
+                            current_room.add_log(f"🚪 {p['name']} がルームを退出しました。")
+
+                    if current_room.host_id == client_id and current_room.lobby_humans:
+                        current_room.host_id = current_room.lobby_humans[0]["id"]
+
+                    if client_id in connected_users:
+                        connected_users[client_id]["room_id"] = None
+
+                    room_to_notify = current_room
+                    current_room = None
+                    await ws.send_text('{"type":"LEFT_ROOM_OK"}')
+
+                    if room_to_notify.phase == "PLAYING":
+                        active = [x for x in room_to_notify.players if not x["finished"]]
+                        humans_active = [x for x in active if not x["isAI"]]
+                        n = len(room_to_notify.players)
+                        if (n == 1 and len(active) == 0) or (n > 1 and (len(active) <= 1 or len(humans_active) == 0)):
+                            room_to_notify.finish_game_and_assign_ranks("=== プレイヤー退出によりゲーム終了 ===")
+                        elif was_current_turn:
+                            room_to_notify.check_victory_and_advance()
+                            asyncio.create_task(run_ai_turns_if_needed(room_to_notify))
+
+                    await room_to_notify.broadcast()
+                continue
+
             elif action == "RECONNECT":
                 client_id = data.get("clientId", "")
                 rid = data.get("roomId", "")
                 name = data.get("playerName", "").strip()
+                avatar = data.get("avatar", "")
                 if client_id in connected_users:
                     connected_users[client_id]["ws"] = ws
                     if name:
                         connected_users[client_id]["name"] = name
+                    if avatar:
+                        connected_users[client_id]["avatar"] = avatar
 
                 room = rooms.get(rid)
                 if room:
                     is_member = any(h["id"] == client_id for h in room.lobby_humans) or any(
-                        p["id"] == client_id for p in room.players
+                        p["id"] == client_id and not p.get("leftRoom") for p in room.players
                     )
                     if is_member:
                         room.connections[client_id] = ws
@@ -630,16 +734,25 @@ async def websocket_endpoint(ws: WebSocket):
                 hand_card = data["handCard"]
                 field_idx = int(data["fieldIdx"])
                 anime = data["anime"]
+                force_play = bool(data.get("forcePlay", False))
                 target = current_room.field[field_idx]
 
-                if hand_card in p["hand"] and anime in current_room.find_common_anime(hand_card, target, pid):
-                    r1 = get_first_character(anime, hand_card)
-                    r2 = get_first_character(anime, target)
-                    current_room.add_log(f"{p['name']}: {hand_card}（{r1}）を {target}（{r2}）に重ね『{anime}』を宣言")
+                if hand_card in p["hand"] and (
+                    force_play or anime in current_room.find_common_anime(hand_card, target, pid)
+                ):
+                    if force_play:
+                        display_anime = "未登録作品（強制出し）"
+                        current_room.add_log(f"{p['name']}: {hand_card} を {target} に重ね『{display_anime}』を宣言")
+                        p["usedAnime"].append(f"{hand_card}×{target}(未登録)")
+                    else:
+                        r1 = get_first_character(anime, hand_card)
+                        r2 = get_first_character(anime, target)
+                        current_room.add_log(f"{p['name']}: {hand_card}（{r1}）を {target}（{r2}）に重ね『{anime}』を宣言")
+                        current_room.used_anime.add(anime)
+                        p["usedAnime"].append(anime)
+
                     current_room.field[field_idx] = hand_card
                     p["hand"].remove(hand_card)
-                    current_room.used_anime.add(anime)
-                    p["usedAnime"].append(anime)
                     current_room.acted_in_round = True
                     current_room.check_victory_and_advance()
                     await current_room.broadcast()

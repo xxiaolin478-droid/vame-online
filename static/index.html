@@ -159,9 +159,108 @@
       color: var(--text);
     }
 
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn-force {
+      background: #7c3aed;
+      color: #fff;
+    }
+
+    .btn-force:hover {
+      background: #6d28d9;
+    }
+
     .btn:disabled {
       opacity: 0.45;
       cursor: not-allowed;
+    }
+
+    /* スマホ通知風トースト */
+    .toast-container {
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 320px;
+      width: calc(100% - 28px);
+      pointer-events: none;
+    }
+
+    .toast-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.94);
+      color: #fff;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      padding: 10px 14px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28);
+      animation: slideInToast 0.3s ease-out, fadeOutToast 0.4s ease-in 3.8s forwards;
+    }
+
+    @keyframes slideInToast {
+      from {
+        transform: translateY(-20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeOutToast {
+      from {
+        opacity: 1;
+      }
+
+      to {
+        opacity: 0;
+      }
+    }
+
+    /* アイコン表示 */
+    .avatar-setup {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .avatar-preview {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--primary);
+      background: #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .avatar-sm {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      object-fit: cover;
+      vertical-align: middle;
+      border: 1px solid var(--border);
+      background: #e2e8f0;
+      flex-shrink: 0;
+    }
+
+    .user-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .ai-item {
@@ -223,6 +322,13 @@
       margin-bottom: 12px;
     }
 
+    .status-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
     .players-strip {
       display: flex;
       flex-wrap: wrap;
@@ -231,6 +337,9 @@
     }
 
     .p-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       background: #fff;
       border: 2px solid var(--border);
       border-radius: 8px;
@@ -247,6 +356,20 @@
     .p-chip.finished {
       opacity: 0.6;
       background: #e2e8f0;
+    }
+
+    .eliminated-banner {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
     }
 
     .cards-row {
@@ -352,6 +475,9 @@
 </head>
 
 <body>
+  <!-- スマホ風ログイン通知コンテナ -->
+  <div id="toastContainer" class="toast-container"></div>
+
   <header>
     <h1>🎙️ 声優共演カードバトル ONLINE</h1>
     <span class="badge" id="connBadge">接続中...</span>
@@ -363,18 +489,27 @@
       <div class="grid-2">
         <div class="card-box">
           <h2>あなたのプレイヤー情報</h2>
-          <div class="form-row">
-            <label>プレイヤーネーム（入力すると自動保存されます）</label>
-            <input type="text" id="playerNameInput" maxlength="16" oninput="onNameChange()" />
+          <div class="avatar-setup">
+            <img id="avatarPreviewImg" class="avatar-preview" alt="アイコン" />
+            <div>
+              <label class="btn btn-outline btn-sm" style="cursor:pointer; display:inline-block;">
+                📷 写真からアイコンを選ぶ
+                <input type="file" id="avatarFileInput" accept="image/*" class="hidden"
+                  onchange="onAvatarSelected(event)" />
+              </label>
+              <button class="btn btn-outline btn-sm" onclick="clearAvatar()" style="margin-left:4px;">リセット</button>
+              <p style="font-size:0.75rem;color:var(--muted);margin-top:4px;">※ 選んだ写真は自動リサイズされて保存されます。</p>
+            </div>
           </div>
-          <p style="font-size:0.8rem;color:var(--muted);">
-            ※ 名前はこの端末に保存され、試合をまたいでも変わりません。
-          </p>
+          <div class="form-row">
+            <label>プレイヤーネーム（自動保存）</label>
+            <input type="text" id="playerNameInput" maxlength="16" oninput="onProfileChange()" />
+          </div>
         </div>
 
         <div class="card-box">
           <h2>🟢 現在アクセス中のユーザー（<span id="onlineCountSpan">0</span>人）</h2>
-          <ul class="lobby-list" id="onlineUsersList" style="max-height:140px;overflow-y:auto;"></ul>
+          <ul class="lobby-list" id="onlineUsersList" style="max-height:175px;overflow-y:auto;"></ul>
         </div>
       </div>
 
@@ -386,7 +521,7 @@
             <label>ゲームモード</label>
             <select id="endlessSelect" onchange="toggleExtraRow()">
               <option value="0">通常モード（手札を0枚にしたら勝利）</option>
-              <option value="1">エンドレスモード（上限枚数到達まで継続）</option>
+              <option value="1">エンドレスモード（上限到達で脱落／山札切れで終了）</option>
             </select>
           </div>
           <div class="form-row">
@@ -394,7 +529,7 @@
             <input type="number" id="startHandInput" value="5" min="1" max="15" />
           </div>
           <div class="form-row hidden" id="extraCardRow">
-            <label>取得可能枚数（初期＋この枚数で終了）</label>
+            <label>取得可能枚数（初期＋この枚数到達で脱落）</label>
             <input type="number" id="extraCardInput" value="3" min="1" max="20" />
           </div>
           <div class="form-row">
@@ -403,7 +538,7 @@
           </div>
           <div class="form-row">
             <label>AIプレイヤー人数（0〜20人）</label>
-            <input type="number" id="aiCountInput" value="0" min="0" max="20" onchange="renderAiConfigs()" />
+            <input type="number" id="aiCountInput" value="1" min="0" max="20" onchange="renderAiConfigs()" />
           </div>
           <div id="aiConfigContainer"></div>
           <button class="btn btn-primary" onclick="createRoom()">ルームを作成する</button>
@@ -428,6 +563,7 @@
           <span>ルームID: <strong id="lobbyRoomId"
               style="color:var(--primary);font-size:1.4rem;letter-spacing:0.1em;"></strong></span>
           <button class="btn btn-outline btn-sm" id="copyIdBtn" onclick="copyRoomId()">📋 IDをコピー</button>
+          <button class="btn btn-outline btn-sm" onclick="leaveRoom()">ホームに戻る</button>
         </div>
         <p style="font-size:0.85rem;color:var(--muted);margin-bottom:8px;">
           ※ LINEや通話アプリに切り替えてIDを送っても、この画面に戻れば自動で復帰します。
@@ -445,7 +581,19 @@
           <strong>第<span id="matchNum">1</span>戦 ／ 🌀 <span id="turnNum">1</span>巡目</strong> ｜
           山札: <span id="deckNum">0</span>枚 (リフル <span id="refillNum">0/10</span>)
         </div>
-        <div id="turnBanner" style="font-weight:bold;color:#fbbf24;"></div>
+        <div class="status-right">
+          <div id="turnBanner" style="font-weight:bold;color:#fbbf24;"></div>
+          <button class="btn btn-danger btn-sm" onclick="confirmAbortToHome()">🏠 中断してホームへ</button>
+        </div>
+      </div>
+
+      <!-- エンドレスモード敗退時の途中退出バナー -->
+      <div id="eliminatedBanner" class="eliminated-banner hidden">
+        <div>
+          <strong>💀 手札上限に到達したため敗退しました</strong>
+          <div style="font-size:0.85rem;">他のプレイヤーの対戦を見守るか、ルームを退出してホームに戻ることができます。</div>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="leaveRoom()">🚪 ルームを退出する</button>
       </div>
 
       <div class="players-strip" id="playersStrip"></div>
@@ -463,7 +611,7 @@
         <div id="animeSelectArea" class="hidden" style="margin-top:12px;"></div>
         <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;" id="controlButtons"></div>
         <p class="alert-msg" id="gameAlert"></p>
-        <p class="key-guide">⌨️ キーボード操作: [1]〜[9] 選択 / [0] スキップ / [Esc] 選択解除</p>
+        <p class="key-guide">⌨️ キーボード操作: [1]〜[9] 選択 / [0] スキップ / [a] 未登録作品として強制出し / [Esc] 選択解除</p>
       </div>
 
       <!-- 対戦ログ -->
@@ -485,7 +633,10 @@
   </main>
 
   <script>
-    // ブラウザごとに永続的な clientId とプレイヤーネームを保持
+    const DEFAULT_AVATAR = "data:image/svg+xml;utf8," + encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#cbd5e1"/><circle cx="32" cy="24" r="12" fill="#64748b"/><path d="M12 58c0-11 9-18 20-18s20 7 20 18" fill="#64748b"/></svg>`
+    );
+
     let clientId = localStorage.getItem("va_client_id");
     if (!clientId) {
       clientId = "c_" + Math.random().toString(36).slice(2, 10);
@@ -500,10 +651,15 @@
     const nameInputEl = document.getElementById("playerNameInput");
     nameInputEl.value = savedName;
 
+    let savedAvatar = localStorage.getItem("va_player_avatar") || "";
+    const avatarPreviewEl = document.getElementById("avatarPreviewImg");
+    avatarPreviewEl.src = savedAvatar || DEFAULT_AVATAR;
+
     let activeRoomId = sessionStorage.getItem("va_active_room") || "";
     let ws = null;
     let reconnectTimer = null;
     let pingTimer = null;
+    let hasAnnouncedInitialLogin = false;
 
     let state = null;
     let uiStep = "SELECT_HAND";
@@ -511,24 +667,87 @@
     let selectedFieldIdx = null;
     let currentAnimeOptions = [];
 
-    function getCurrentPlayerName() {
-      const val = nameInputEl.value.trim();
-      if (val) return val;
-      return savedName;
+    function getAvatarSrc(avatarStr, isAI = false) {
+      if (isAI) {
+        return "data:image/svg+xml;utf8," + encodeURIComponent(
+          `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#1e293b"/><rect x="16" y="20" width="32" height="24" rx="6" fill="#38bdf8"/><circle cx="25" cy="32" r="3" fill="#0f172a"/><circle cx="39" cy="32" r="3" fill="#0f172a"/></svg>`
+        );
+      }
+      return avatarStr || DEFAULT_AVATAR;
     }
 
-    function onNameChange() {
+    function showLoginToast(name, avatar) {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      toast.className = "toast-banner";
+      const av = getAvatarSrc(avatar, false);
+      toast.innerHTML = `
+        <img class="avatar-sm" src="${av}" style="width:32px;height:32px;" />
+        <div>
+          <div style="font-size:0.72rem;color:#93c5fd;font-weight:bold;">🔔 ログイン通知</div>
+          <div style="font-size:0.88rem;font-weight:bold;">${name} さんがアクセスしました</div>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 4300);
+    }
+
+    function getCurrentPlayerName() {
+      const val = nameInputEl.value.trim();
+      return val || savedName;
+    }
+
+    function onAvatarSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const size = 96;
+          const canvas = document.createElement("canvas");
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext("2d");
+
+          const minSide = Math.min(img.width, img.height);
+          const sx = (img.width - minSide) / 2;
+          const sy = (img.height - minSide) / 2;
+          ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+
+          savedAvatar = canvas.toDataURL("image/jpeg", 0.75);
+          localStorage.setItem("va_player_avatar", savedAvatar);
+          avatarPreviewEl.src = savedAvatar;
+          onProfileChange();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearAvatar() {
+      savedAvatar = "";
+      localStorage.removeItem("va_player_avatar");
+      avatarPreviewEl.src = DEFAULT_AVATAR;
+      document.getElementById("avatarFileInput").value = "";
+      onProfileChange();
+    }
+
+    function onProfileChange() {
       const val = nameInputEl.value.trim();
       if (val) {
         savedName = val;
         localStorage.setItem("va_player_name", val);
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({
-            action: "UPDATE_NAME",
-            clientId,
-            playerName: val
-          }));
-        }
+      }
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          action: "UPDATE_PROFILE",
+          clientId,
+          playerName: getCurrentPlayerName(),
+          avatar: savedAvatar
+        }));
       }
     }
 
@@ -544,19 +763,22 @@
         badge.textContent = "オンライン接続済";
         badge.style.background = "#16a34a";
 
-        // 接続時に自分のIDと名前をサーバーへ登録
         ws.send(JSON.stringify({
           action: "REGISTER_USER",
           clientId,
-          playerName: getCurrentPlayerName()
+          playerName: getCurrentPlayerName(),
+          avatar: savedAvatar,
+          isFirstLogin: !hasAnnouncedInitialLogin
         }));
+        hasAnnouncedInitialLogin = true;
 
         if (activeRoomId) {
           ws.send(JSON.stringify({
             action: "RECONNECT",
             clientId,
             roomId: activeRoomId,
-            playerName: getCurrentPlayerName()
+            playerName: getCurrentPlayerName(),
+            avatar: savedAvatar
           }));
         }
 
@@ -585,13 +807,23 @@
         const msg = JSON.parse(ev.data);
         if (msg.type === "PONG") return;
 
+        if (msg.type === "USER_LOGIN_NOTIFY") {
+          showLoginToast(msg.name, msg.avatar);
+          return;
+        }
         if (msg.type === "ONLINE_USERS") {
           renderOnlineUsers(msg.users);
           return;
         }
-        if (msg.type === "SESSION_EXPIRED") {
+        if (msg.type === "LEFT_ROOM_OK" || msg.type === "SESSION_EXPIRED") {
           activeRoomId = "";
           sessionStorage.removeItem("va_active_room");
+          state = null;
+          resetSelection();
+          document.getElementById("gameView").classList.add("hidden");
+          document.getElementById("homeView").classList.remove("hidden");
+          document.getElementById("setupPanels").classList.remove("hidden");
+          document.getElementById("lobbyPanel").classList.add("hidden");
           return;
         }
         if (msg.type === "ERROR") {
@@ -600,7 +832,8 @@
         }
         if (msg.type === "ANIME_OPTIONS") {
           if (msg.options.length === 0) {
-            document.getElementById("gameAlert").textContent = "❌ その2人の共演アニメは見つかりませんでした。";
+            document.getElementById("gameAlert").textContent =
+              "❌ 共演アニメが見つかりませんでした。（未登録作品の場合は [a] キーで強制出しできます）";
             uiStep = "SELECT_FIELD";
             renderGame();
             return;
@@ -632,7 +865,12 @@
       ul.innerHTML = "";
       users.forEach(u => {
         const meTag = u.id === clientId ? " <strong style='color:var(--primary);'>(あなた)</strong>" : "";
-        ul.innerHTML += `<li><span>👤 ${u.name}${meTag}</span><span class="status-tag">${u.status}</span></li>`;
+        const av = getAvatarSrc(u.avatar, false);
+        ul.innerHTML += `
+          <li>
+            <span class="user-inline"><img class="avatar-sm" src="${av}" />${u.name}${meTag}</span>
+            <span class="status-tag">${u.status}</span>
+          </li>`;
       });
     }
 
@@ -645,7 +883,8 @@
             action: "RECONNECT",
             clientId,
             roomId: activeRoomId,
-            playerName: getCurrentPlayerName()
+            playerName: getCurrentPlayerName(),
+            avatar: savedAvatar
           }));
         }
       }
@@ -663,7 +902,7 @@
       document.getElementById("maxActorSpan").textContent = d.totalActors;
       const inp = document.getElementById("actorLimitInput");
       inp.max = d.totalActors;
-      inp.value = Math.min(220, d.totalActors);
+      inp.value = Math.min(50, d.totalActors);
     });
 
     function toggleExtraRow() {
@@ -672,7 +911,7 @@
     }
 
     function renderAiConfigs() {
-      const aiCount = Math.min(7, Math.max(0, parseInt(document.getElementById("aiCountInput").value) || 0));
+      const aiCount = Math.min(20, Math.max(0, parseInt(document.getElementById("aiCountInput").value) || 0));
       const container = document.getElementById("aiConfigContainer");
       container.innerHTML = "";
       for (let i = 1; i <= aiCount; i++) {
@@ -717,6 +956,7 @@
         action: "CREATE_ROOM",
         clientId,
         playerName: pName,
+        avatar: savedAvatar,
         settings: {
           endlessMode: document.getElementById("endlessSelect").value === "1",
           startHandSize: parseInt(document.getElementById("startHandInput").value) || 5,
@@ -735,7 +975,8 @@
         action: "JOIN_ROOM",
         clientId,
         roomId: document.getElementById("joinRoomIdInput").value,
-        playerName: pName
+        playerName: pName,
+        avatar: savedAvatar
       });
     }
 
@@ -756,9 +997,19 @@
       sendSafe({ action: "RESTART_GAME" });
     }
 
+    function confirmAbortToHome() {
+      if (!state) return;
+      if (state.phase === "RESULT") {
+        leaveRoom();
+        return;
+      }
+      if (confirm("現在のゲームを中断（退出）してホーム画面に戻りますか？")) {
+        leaveRoom();
+      }
+    }
+
     function leaveRoom() {
-      sessionStorage.removeItem("va_active_room");
-      location.reload();
+      sendSafe({ action: "LEAVE_ROOM", clientId });
     }
 
     function renderAll() {
@@ -773,10 +1024,20 @@
         const ul = document.getElementById("lobbyMemberList");
         ul.innerHTML = "";
         state.lobbyHumans.forEach(h => {
-          ul.innerHTML += `<li><span>👤 ${h.name}</span><span>${h.id === state.hostId ? "👑 ホスト" : "参加者"}</span></li>`;
+          const av = getAvatarSrc(h.avatar, false);
+          ul.innerHTML += `
+            <li>
+              <span class="user-inline"><img class="avatar-sm" src="${av}" />${h.name}</span>
+              <span>${h.id === state.hostId ? "👑 ホスト" : "参加者"}</span>
+            </li>`;
         });
         state.aiConfigs.forEach(ai => {
-          ul.innerHTML += `<li><span>🤖 ${ai.name}</span><span>知識率 ${ai.pct}%</span></li>`;
+          const av = getAvatarSrc("", true);
+          ul.innerHTML += `
+            <li>
+              <span class="user-inline"><img class="avatar-sm" src="${av}" />${ai.name}</span>
+              <span>知識率 ${ai.pct}%</span>
+            </li>`;
         });
 
         const isHost = state.hostId === clientId;
@@ -796,17 +1057,31 @@
       document.getElementById("refillNum").textContent = `${state.refillCount}/${state.maxRefill}`;
 
       const curP = state.players[state.currentPid];
+      const me = state.players[state.myPid];
       const isMyTurn = state.phase === "PLAYING" && state.currentPid === state.myPid;
       document.getElementById("turnBanner").textContent =
         state.phase === "RESULT" ? "🏁 ゲーム終了" :
           isMyTurn ? "🔥 あなたのターンです！" : `⏳ ${curP.name} の思考中...`;
+
+      const isEndlessEliminated =
+        state.phase === "PLAYING" &&
+        state.settings.endlessMode &&
+        me &&
+        me.finished;
+      document.getElementById("eliminatedBanner").classList.toggle("hidden", !isEndlessEliminated);
 
       const strip = document.getElementById("playersStrip");
       strip.innerHTML = "";
       state.players.forEach(p => {
         const cls = ["p-chip", p.pid === state.currentPid && state.phase === "PLAYING" ? "active" : "", p.finished ? "finished" : ""].join(" ");
         const rankTxt = p.rank ? ` [${p.rank}位]` : "";
-        strip.innerHTML += `<div class="${cls}">${p.pid + 1}. ${p.name} (手札:${p.handCount}枚)${rankTxt}</div>`;
+        const leftTxt = p.leftRoom ? " (退出済)" : "";
+        const av = getAvatarSrc(p.avatar, p.isAI);
+        strip.innerHTML += `
+          <div class="${cls}">
+            <img class="avatar-sm" src="${av}" />
+            <span>${p.pid + 1}. ${p.name} (${p.handCount}枚)${rankTxt}${leftTxt}</span>
+          </div>`;
       });
 
       const fieldRow = document.getElementById("fieldCardsRow");
@@ -820,7 +1095,6 @@
           </div>`;
       });
 
-      const me = state.players[state.myPid];
       const handRow = document.getElementById("handCardsRow");
       handRow.innerHTML = "";
       if (me) {
@@ -846,7 +1120,13 @@
         stepTitle.textContent = "🏆 最終結果・使用アニメ履歴";
         let html = "";
         state.players.slice().sort((a, b) => (a.rank || 99) - (b.rank || 99)).forEach(p => {
-          html += `<p style="margin-bottom:6px;"><strong>${p.rank}位 ${p.name}:</strong> ${p.usedAnime.join(" / ") || "なし"}</p>`;
+          const av = getAvatarSrc(p.avatar, p.isAI);
+          html += `
+            <p style="margin-bottom:8px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <img class="avatar-sm" src="${av}" />
+              <strong>${p.rank}位 ${p.name}:</strong>
+              <span>${p.usedAnime.join(" / ") || "なし"}</span>
+            </p>`;
         });
         animeArea.innerHTML = html;
         animeArea.classList.remove("hidden");
@@ -857,16 +1137,22 @@
         document.getElementById("waitingRematchText").classList.toggle("hidden", isHost);
       } else {
         resultActions.classList.add("hidden");
-        if (!isMyTurn) {
+        if (me && me.finished) {
+          stepTitle.textContent = "🎴 あなたはすでに終了しています（観戦中）";
+        } else if (!isMyTurn) {
           stepTitle.textContent = "🎴 あなたの手札（相手のターン待機中）";
         } else if (uiStep === "SELECT_HAND") {
           stepTitle.textContent = "① 出す手札を選んでください（数字キー 1〜 / 0でスキップ）";
           ctrlBtns.innerHTML = `<button class="btn btn-outline" onclick="triggerSkip()">[0] スキップ（手札交換）</button>`;
         } else if (uiStep === "SELECT_FIELD") {
           stepTitle.textContent = `② 『${selectedHandCard}』を重ねる場のカードを選んでください（1〜3）`;
-          ctrlBtns.innerHTML = `<button class="btn btn-outline" onclick="resetSelection();renderGame();">[Esc] 手札選択に戻る</button>`;
+          let btns = `<button class="btn btn-outline" onclick="resetSelection();renderGame();">[Esc] 手札選択に戻る</button>`;
+          if (selectedFieldIdx !== null) {
+            btns += `<button class="btn btn-force" onclick="forcePlayWildcard()">[a] 未登録作品として強制出し</button>`;
+          }
+          ctrlBtns.innerHTML = btns;
         } else if (uiStep === "SELECT_ANIME") {
-          stepTitle.textContent = "③ 共演アニメを選んでください（数字キーで確定）";
+          stepTitle.textContent = "③ 共演アニメを選んでください（数字キーで確定 / [a]で未登録作品として出す）";
           let html = "";
           currentAnimeOptions.forEach((opt, i) => {
             html += `<button class="anime-choice" onclick="confirmPlay(${i})">
@@ -876,7 +1162,10 @@
           });
           animeArea.innerHTML = html;
           animeArea.classList.remove("hidden");
-          ctrlBtns.innerHTML = `<button class="btn btn-outline" onclick="uiStep='SELECT_FIELD';renderGame();">[Esc] 場の選択に戻る</button>`;
+          ctrlBtns.innerHTML = `
+            <button class="btn btn-outline" onclick="uiStep='SELECT_FIELD';renderGame();">[Esc] 場の選択に戻る</button>
+            <button class="btn btn-force" onclick="forcePlayWildcard()">[a] 未登録作品として強制出し</button>
+          `;
         } else if (uiStep === "SELECT_DISCARD") {
           stepTitle.textContent = "🗑 捨てる手札を選んでください（1枚引きます）";
           ctrlBtns.innerHTML = `<button class="btn btn-outline" onclick="resetSelection();renderGame();">[Esc] キャンセル</button>`;
@@ -891,10 +1180,11 @@
     function onSelectHand(idx) {
       if (!state || state.phase !== "PLAYING" || state.currentPid !== state.myPid) return;
       const me = state.players[state.myPid];
-      if (!me || !me.hand[idx]) return;
+      if (!me || me.finished || !me.hand[idx]) return;
 
       if (uiStep === "SELECT_HAND") {
         selectedHandCard = me.hand[idx];
+        selectedFieldIdx = null;
         uiStep = "SELECT_FIELD";
         document.getElementById("gameAlert").textContent = "";
         renderGame();
@@ -922,7 +1212,21 @@
         action: "PLAY_CARD",
         handCard: selectedHandCard,
         fieldIdx: selectedFieldIdx,
-        anime: opt.anime
+        anime: opt.anime,
+        forcePlay: false
+      });
+      resetSelection();
+    }
+
+    function forcePlayWildcard() {
+      if (!state || state.phase !== "PLAYING" || state.currentPid !== state.myPid) return;
+      if (!selectedHandCard || selectedFieldIdx === null) return;
+      sendSafe({
+        action: "PLAY_CARD",
+        handCard: selectedHandCard,
+        fieldIdx: selectedFieldIdx,
+        anime: "",
+        forcePlay: true
       });
       resetSelection();
     }
@@ -950,6 +1254,12 @@
       if (e.key === "Escape") {
         resetSelection();
         renderGame();
+        return;
+      }
+      if (e.key.toLowerCase() === "a") {
+        if ((uiStep === "SELECT_FIELD" || uiStep === "SELECT_ANIME") && selectedHandCard && selectedFieldIdx !== null) {
+          forcePlayWildcard();
+        }
         return;
       }
       if (e.key === "0" && uiStep === "SELECT_HAND") {
