@@ -538,7 +538,7 @@
           </div>
           <div class="form-row">
             <label>AIプレイヤー人数（0〜20人）</label>
-            <input type="number" id="aiCountInput" value="1" min="0" max="20" onchange="renderAiConfigs()" />
+            <input type="number" id="aiCountInput" value="0" min="0" max="20" onchange="renderAiConfigs()" />
           </div>
           <div id="aiConfigContainer"></div>
           <button class="btn btn-primary" onclick="createRoom()">ルームを作成する</button>
@@ -902,7 +902,7 @@
       document.getElementById("maxActorSpan").textContent = d.totalActors;
       const inp = document.getElementById("actorLimitInput");
       inp.max = d.totalActors;
-      inp.value = Math.min(50, d.totalActors);
+      inp.value = Math.min(220, d.totalActors);
     });
 
     function toggleExtraRow() {
@@ -961,7 +961,7 @@
           endlessMode: document.getElementById("endlessSelect").value === "1",
           startHandSize: parseInt(document.getElementById("startHandInput").value) || 5,
           extraCard: parseInt(document.getElementById("extraCardInput").value) || 3,
-          actorLimit: parseInt(document.getElementById("actorLimitInput").value) || 50,
+          actorLimit: parseInt(document.getElementById("actorLimitInput").value) || 220,
           aiList
         }
       });
