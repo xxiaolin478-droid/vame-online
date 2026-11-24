@@ -196,7 +196,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      max-width: 320px;
+      max-width: 330px;
       width: calc(100% - 28px);
       pointer-events: none;
     }
@@ -205,14 +205,19 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      background: rgba(15, 23, 42, 0.94);
+      background: rgba(15, 23, 42, 0.95);
       color: #fff;
       backdrop-filter: blur(8px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.18);
       border-radius: 14px;
       padding: 10px 14px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.28);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
       animation: slideInToast 0.3s ease-out, fadeOutToast 0.4s ease-in 3.8s forwards;
+    }
+
+    .toast-banner.turn-alert {
+      background: rgba(120, 53, 15, 0.96);
+      border-color: #fbbf24;
     }
 
     @keyframes slideInToast {
@@ -813,9 +818,6 @@
     const DEFAULT_AVATAR = "data:image/svg+xml;utf8," + encodeURIComponent(
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#cbd5e1"/><circle cx="32" cy="24" r="12" fill="#64748b"/><path d="M12 58c0-11 9-18 20-18s20 7 20 18" fill="#64748b"/></svg>`
     );
-    const AI_AVATAR = "data:image/svg+xml;utf8," + encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#1e293b"/><rect x="16" y="20" width="32" height="24" rx="6" fill="#38bdf8"/><circle cx="25" cy="32" r="3" fill="#0f172a"/><circle cx="39" cy="32" r="3" fill="#0f172a"/></svg>`
-    );
 
     let clientId = localStorage.getItem("va_client_id");
     if (!clientId) {
@@ -845,6 +847,7 @@
     let actorAnimesMaster = {};
     let selectedActorSet = new Set();
     let globalChatList = [];
+    let hasLoadedInitialGlobalChat = false;
 
     let state = null;
     let uiStep = "SELECT_HAND";
@@ -853,7 +856,11 @@
     let currentAnimeOptions = [];
 
     function getAvatarSrc(avatarStr, isAI = false) {
-      if (isAI) return AI_AVATAR;
+      if (isAI) {
+        return "data:image/svg+xml;utf8," + encodeURIComponent(
+          `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#1e293b"/><rect x="16" y="20" width="32" height="24" rx="6" fill="#38bdf8"/><circle cx="25" cy="32" r="3" fill="#0f172a"/><circle cx="39" cy="32" r="3" fill="#0f172a"/></svg>`
+        );
+      }
       return avatarStr || DEFAULT_AVATAR;
     }
 
@@ -865,22 +872,52 @@
         .replace(/"/g, "&quot;");
     }
 
-    function showLoginToast(name, avatar) {
+    // 汎用トースト通知（ログイン・チャット・自分のターン共通）
+    function showToast({ title, titleColor = "#93c5fd", body, avatar = "", isTurnAlert = false }) {
       const container = document.getElementById("toastContainer");
       const toast = document.createElement("div");
-      toast.className = "toast-banner";
+      toast.className = "toast-banner" + (isTurnAlert ? " turn-alert" : "");
       const av = getAvatarSrc(avatar, false);
       toast.innerHTML = `
-        <img class="avatar-sm" src="${av}" style="width:32px;height:32px;" />
-        <div>
-          <div style="font-size:0.72rem;color:#93c5fd;font-weight:bold;">🔔 ログイン通知</div>
-          <div style="font-size:0.88rem;font-weight:bold;">${escapeHtml(name)} さんがアクセスしました</div>
+        <img class="avatar-sm" src="${av}" style="width:34px;height:34px;" />
+        <div style="min-width:0; flex:1;">
+          <div style="font-size:0.72rem;color:${titleColor};font-weight:bold;">${title}</div>
+          <div style="font-size:0.86rem;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${body}</div>
         </div>
       `;
       container.appendChild(toast);
       setTimeout(() => {
         if (toast.parentNode) toast.parentNode.removeChild(toast);
       }, 4300);
+    }
+
+    function showLoginToast(name, avatar) {
+      showToast({
+        title: "🔔 ログイン通知",
+        titleColor: "#93c5fd",
+        body: `${escapeHtml(name)} さんがアクセスしました`,
+        avatar
+      });
+    }
+
+    function showChatToast(msgObj, channelLabel) {
+      if (!msgObj || msgObj.clientId === clientId) return;
+      showToast({
+        title: `💬 ${channelLabel}（${escapeHtml(msgObj.name)}）`,
+        titleColor: "#86efac",
+        body: escapeHtml(msgObj.text),
+        avatar: msgObj.avatar
+      });
+    }
+
+    function showMyTurnToast() {
+      showToast({
+        title: "🔥 あなたのターン！",
+        titleColor: "#fde047",
+        body: "手札からカードを出すかスキップしてください",
+        avatar: savedAvatar,
+        isTurnAlert: true
+      });
     }
 
     function getCurrentPlayerName() {
@@ -1126,13 +1163,24 @@
           return;
         }
         if (msg.type === "GLOBAL_CHAT_UPDATE") {
-          globalChatList = msg.chatMessages || [];
+          const newList = msg.chatMessages || [];
+          if (hasLoadedInitialGlobalChat && newList.length > 0 && !activeRoomId) {
+            const latest = newList[newList.length - 1];
+            showChatToast(latest, "ロビー全体チャット");
+          }
+          hasLoadedInitialGlobalChat = true;
+          globalChatList = newList;
           renderSingleChatBox("homeChatMessages", globalChatList);
           return;
         }
         if (msg.type === "CHAT_UPDATE") {
-          if (state) state.chatMessages = msg.chatMessages;
-          renderRoomChatBoxes(msg.chatMessages);
+          const newList = msg.chatMessages || [];
+          if (newList.length > 0) {
+            const latest = newList[newList.length - 1];
+            showChatToast(latest, "ルームチャット");
+          }
+          if (state) state.chatMessages = newList;
+          renderRoomChatBoxes(newList);
           return;
         }
         if (msg.type === "LEFT_ROOM_OK" || msg.type === "SESSION_EXPIRED") {
@@ -1170,9 +1218,19 @@
           activeRoomId = msg.roomId;
           sessionStorage.setItem("va_active_room", activeRoomId);
 
+          const prevPhase = state ? state.phase : "";
           const prevPid = state ? state.currentPid : -1;
           const prevMatch = state ? state.matchCount : -1;
+
           state = msg;
+
+          const isNowMyTurn = state.phase === "PLAYING" && state.currentPid === state.myPid && state.myPid >= 0;
+          const wasMyTurn = prevPhase === "PLAYING" && prevPid === state.myPid && prevMatch === state.matchCount;
+
+          if (isNowMyTurn && !wasMyTurn) {
+            showMyTurnToast();
+          }
+
           if (state.currentPid !== prevPid || state.matchCount !== prevMatch) {
             resetSelection();
           }
@@ -1386,7 +1444,7 @@
       const isMyTurn = state.phase === "PLAYING" && state.currentPid === state.myPid;
       document.getElementById("turnBanner").textContent =
         state.phase === "RESULT" ? "🏁 ゲーム終了" :
-          isMyTurn ? "🔥 あなたのターンです！" : `⏳ ${curP ? curP.name : ""} の思考中...`;
+          isMyTurn ? "🔥 あなたのターンです！" : `⏳ ${curP.name} の思考中...`;
 
       const isEndlessEliminated =
         state.phase === "PLAYING" &&
@@ -1582,8 +1640,7 @@
     }
 
     document.addEventListener("keydown", (e) => {
-      const tag = document.activeElement ? document.activeElement.tagName : "";
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (document.activeElement.tagName === "INPUT") return;
       if (!state || state.phase !== "PLAYING" || state.currentPid !== state.myPid) return;
 
       if (e.key === "Escape") {
