@@ -1,11 +1,13 @@
 import asyncio
+import datetime
+import gc
 import json
 import random
 import string
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-import pandas as pd
+import openpyxl
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -17,27 +19,35 @@ STATIC_DIR = BASE_DIR / "static"
 COAPPEAR_FILE = BASE_DIR / "共演表.xlsx"
 CHARACTER_FILE = BASE_DIR / "キャラ表2.xlsx"
 
-# --------- 起動時にExcelを1回だけ高速読み込み ---------
-print("Excelファイルを読み込んでいます...")
-
-char_df = pd.read_excel(CHARACTER_FILE)
-df_full = pd.read_excel(COAPPEAR_FILE, index_col=0)
-
-char_df = char_df.drop(index=char_df.index[0])
-first_col = char_df.columns[0]
+# --------- 起動時にExcelを省メモリモード（openpyxl read_only）で読み込み ---------
+print("Excelファイルを省メモリモードで読み込んでいます...")
 
 character_map: Dict[str, Dict[str, List[str]]] = {}
-anime_titles_for_char = [str(c) for c in char_df.columns[1:]]
-char_actors = [str(a).strip() for a in char_df[first_col]]
-char_values = char_df.iloc[:, 1:].to_numpy()
+all_actors: List[str] = []
 
-for r_idx, actor in enumerate(char_actors):
+wb_char = openpyxl.load_workbook(CHARACTER_FILE, read_only=True, data_only=True)
+ws_char = wb_char.active
+char_rows = ws_char.iter_rows(values_only=True)
+
+header_row = next(char_rows, None)
+anime_titles_for_char = [str(c).strip() if c is not None else "" for c in (header_row[1:] if header_row else [])]
+
+# 1行目（放送年行など）をスキップ
+next(char_rows, None)
+
+for row in char_rows:
+    if not row or row[0] is None:
+        continue
+    actor = str(row[0]).strip()
     if not actor or actor in ("nan", "NaN", "None"):
         continue
-    row_cells = char_values[r_idx]
-    for c_idx, anime_title in enumerate(anime_titles_for_char):
-        cell = row_cells[c_idx]
-        if cell is None or (isinstance(cell, float) and pd.isna(cell)):
+    all_actors.append(actor)
+
+    for c_idx, cell in enumerate(row[1:]):
+        if cell is None or c_idx >= len(anime_titles_for_char):
+            continue
+        anime_title = anime_titles_for_char[c_idx]
+        if not anime_title:
             continue
         cell_str = str(cell).strip()
         if not cell_str or cell_str in ("nan", "NaN"):
@@ -46,25 +56,32 @@ for r_idx, actor in enumerate(char_actors):
         if roles:
             character_map.setdefault(anime_title, {}).setdefault(actor, []).extend(roles)
 
-all_actors: List[str] = [
-    a.strip() for a in char_df[first_col].dropna().astype(str).tolist() if a.strip()
-]
+wb_char.close()
 
 all_coappear_full: Dict[tuple, List[str]] = {}
-unique_occurrences_full = []
+unique_occurrences_set: Set[tuple] = set()
 coactor_count_map: Dict[tuple, int] = {}
 anime_max_coactor_map: Dict[str, int] = {}
 _temp_coactors: Dict[tuple, Set[str]] = {}
 
-idx_list = [str(x).strip() for x in df_full.index]
-col_list = [str(x).strip() for x in df_full.columns]
-coappear_values = df_full.to_numpy()
+wb_co = openpyxl.load_workbook(COAPPEAR_FILE, read_only=True, data_only=True)
+ws_co = wb_co.active
+co_rows = ws_co.iter_rows(values_only=True)
 
-for i, a1 in enumerate(idx_list):
-    row_vals = coappear_values[i]
-    for j, a2 in enumerate(col_list):
-        cell = row_vals[j]
-        if cell is None or (isinstance(cell, float) and pd.isna(cell)):
+co_header = next(co_rows, None)
+col_list = [str(c).strip() if c is not None else "" for c in (co_header[1:] if co_header else [])]
+
+for row in co_rows:
+    if not row or row[0] is None:
+        continue
+    a1 = str(row[0]).strip()
+    if not a1:
+        continue
+    for j, cell in enumerate(row[1:]):
+        if cell is None or j >= len(col_list):
+            continue
+        a2 = col_list[j]
+        if not a2:
             continue
         cell_str = str(cell).strip()
         if cell_str in ("-", "", "nan", "NaN"):
@@ -81,9 +98,12 @@ for i, a1 in enumerate(idx_list):
 
         s_key = (a1, a2) if a1 <= a2 else (a2, a1)
         for anime in animes:
-            unique_occurrences_full.append((s_key[0], s_key[1], anime))
+            unique_occurrences_set.add((s_key[0], s_key[1], anime))
 
-unique_occurrences_full = list(set(unique_occurrences_full))
+wb_co.close()
+
+unique_occurrences_full = list(unique_occurrences_set)
+del unique_occurrences_set
 
 for a1, a2, anime in unique_occurrences_full:
     _temp_coactors.setdefault((anime, a1), set()).add(a2)
@@ -94,6 +114,9 @@ for (anime, actor), coactors in _temp_coactors.items():
     coactor_count_map[(anime, actor)] = cnt
     if cnt > anime_max_coactor_map.get(anime, 0):
         anime_max_coactor_map[anime] = cnt
+
+del _temp_coactors
+gc.collect()
 
 for anime in anime_max_coactor_map:
     if anime_max_coactor_map[anime] <= 0:
@@ -176,6 +199,7 @@ class GameRoom:
         self.lobby_humans: List[dict] = []
         self.ai_configs: List[dict] = settings.get("aiList", [])
         self.match_count = 0
+        self.chat_messages: List[dict] = []
 
         self.players: List[dict] = []
         self.voice_actors: List[str] = []
@@ -189,6 +213,19 @@ class GameRoom:
         self.used_anime: Set[str] = set()
         self.logs: List[str] = []
         self.ai_known_sets: Dict[int, Dict[tuple, Set[str]]] = {}
+
+    def add_chat(self, client_id: str, name: str, avatar: str, text: str):
+        jst = datetime.timezone(datetime.timedelta(hours=9))
+        now_str = datetime.datetime.now(jst).strftime("%H:%M")
+        self.chat_messages.append({
+            "clientId": client_id,
+            "name": name,
+            "avatar": avatar,
+            "text": text,
+            "time": now_str,
+        })
+        if len(self.chat_messages) > 80:
+            self.chat_messages.pop(0)
 
     def add_log(self, msg: str):
         self.logs.append(msg)
@@ -227,8 +264,16 @@ class GameRoom:
 
     def start_game(self):
         self.match_count += 1
-        limit = max(4, min(int(self.settings.get("actorLimit", len(all_actors))), len(all_actors)))
-        self.voice_actors = all_actors[:limit]
+        selected_list = self.settings.get("selectedActors")
+        if isinstance(selected_list, list) and len(selected_list) >= 4:
+            valid_set = set(all_actors)
+            self.voice_actors = [a for a in selected_list if a in valid_set]
+        else:
+            limit = max(4, min(int(self.settings.get("actorLimit", 220)), len(all_actors)))
+            self.voice_actors = all_actors[:limit]
+
+        if len(self.voice_actors) < 4:
+            self.voice_actors = all_actors[:min(220, len(all_actors))]
 
         for h in self.lobby_humans:
             if h["id"] in connected_users:
@@ -303,7 +348,7 @@ class GameRoom:
 
         self.field = [c for _ in range(3) if (c := self.draw_card())]
         self.phase = "PLAYING"
-        self.add_log(f"第{self.match_count}戦 開始！人間プレイヤーの順番がシャッフルされました。")
+        self.add_log(f"第{self.match_count}戦 開始！（使用声優: {len(self.voice_actors)}名 / 順番シャッフル済）")
 
     def get_state_for_client(self, client_id: str) -> dict:
         my_pid = next((i for i, p in enumerate(self.players) if p["id"] == client_id), -1)
@@ -330,7 +375,12 @@ class GameRoom:
             "hostId": self.host_id,
             "phase": self.phase,
             "matchCount": self.match_count,
-            "settings": self.settings,
+            "settings": {
+                "endlessMode": self.settings.get("endlessMode", False),
+                "startHandSize": self.settings.get("startHandSize", 5),
+                "extraCard": self.settings.get("extraCard", 3),
+                "selectedCount": len(self.settings.get("selectedActors") or []),
+            },
             "lobbyHumans": self.lobby_humans,
             "aiConfigs": self.ai_configs,
             "myPid": my_pid,
@@ -342,6 +392,7 @@ class GameRoom:
             "maxRefill": self.max_refill,
             "players": public_players,
             "logs": self.logs,
+            "chatMessages": self.chat_messages,
         }
 
     async def broadcast(self):
@@ -351,6 +402,17 @@ class GameRoom:
             except Exception:
                 pass
         await broadcast_online_users()
+
+    async def broadcast_chat_only(self):
+        payload = json.dumps(
+            {"type": "CHAT_UPDATE", "chatMessages": self.chat_messages},
+            ensure_ascii=False,
+        )
+        for ws in list(self.connections.values()):
+            try:
+                await ws.send_text(payload)
+            except Exception:
+                pass
 
     def finish_game_and_assign_ranks(self, reason_log: str):
         active = [x for x in self.players if not x["finished"]]
@@ -503,7 +565,10 @@ async def index():
 
 @app.get("/api/meta")
 async def get_meta():
-    return {"totalActors": len(all_actors)}
+    return {
+        "totalActors": len(all_actors),
+        "actors": all_actors,
+    }
 
 
 @app.websocket("/ws")
@@ -525,7 +590,7 @@ async def websocket_endpoint(ws: WebSocket):
             if action == "REGISTER_USER":
                 client_id = data["clientId"]
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
-                avatar = data.get("avatar", "")
+                avatar = data.get("avatar", "")[:35000]
                 is_first_login = bool(data.get("isFirstLogin", False))
 
                 existing = connected_users.get(client_id)
@@ -553,7 +618,7 @@ async def websocket_endpoint(ws: WebSocket):
             if action == "UPDATE_PROFILE":
                 client_id = data["clientId"]
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
-                avatar = data.get("avatar", "")
+                avatar = data.get("avatar", "")[:35000]
                 if client_id in connected_users:
                     connected_users[client_id]["name"] = name
                     connected_users[client_id]["avatar"] = avatar
@@ -571,10 +636,20 @@ async def websocket_endpoint(ws: WebSocket):
                     await broadcast_online_users()
                 continue
 
+            if action == "SEND_CHAT" and current_room:
+                text = str(data.get("text", "")).strip()[:200]
+                if text:
+                    u = connected_users.get(client_id, {})
+                    name = u.get("name") or data.get("playerName", "プレイヤー")
+                    avatar = u.get("avatar", "")
+                    current_room.add_chat(client_id, name, avatar, text)
+                    await current_room.broadcast_chat_only()
+                continue
+
             if action == "CREATE_ROOM":
                 client_id = data["clientId"]
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
-                avatar = data.get("avatar", "")
+                avatar = data.get("avatar", "")[:35000]
                 settings = data["settings"]
                 rid = gen_room_id()
                 room = GameRoom(rid, client_id, settings)
@@ -595,7 +670,7 @@ async def websocket_endpoint(ws: WebSocket):
                 client_id = data["clientId"]
                 rid = data.get("roomId", "").strip()
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
-                avatar = data.get("avatar", "")
+                avatar = data.get("avatar", "")[:35000]
                 room = rooms.get(rid)
                 if not room:
                     await ws.send_text(json.dumps({"type": "ERROR", "message": "ルームが見つかりません。"}, ensure_ascii=False))
@@ -658,24 +733,27 @@ async def websocket_endpoint(ws: WebSocket):
                     current_room = None
                     await ws.send_text('{"type":"LEFT_ROOM_OK"}')
 
-                    if room_to_notify.phase == "PLAYING":
-                        active = [x for x in room_to_notify.players if not x["finished"]]
-                        humans_active = [x for x in active if not x["isAI"]]
-                        n = len(room_to_notify.players)
-                        if (n == 1 and len(active) == 0) or (n > 1 and (len(active) <= 1 or len(humans_active) == 0)):
-                            room_to_notify.finish_game_and_assign_ranks("=== プレイヤー退出によりゲーム終了 ===")
-                        elif was_current_turn:
-                            room_to_notify.check_victory_and_advance()
-                            asyncio.create_task(run_ai_turns_if_needed(room_to_notify))
+                    if not room_to_notify.lobby_humans and not room_to_notify.connections:
+                        rooms.pop(room_to_notify.room_id, None)
+                    else:
+                        if room_to_notify.phase == "PLAYING":
+                            active = [x for x in room_to_notify.players if not x["finished"]]
+                            humans_active = [x for x in active if not x["isAI"]]
+                            n = len(room_to_notify.players)
+                            if (n == 1 and len(active) == 0) or (n > 1 and (len(active) <= 1 or len(humans_active) == 0)):
+                                room_to_notify.finish_game_and_assign_ranks("=== プレイヤー退出によりゲーム終了 ===")
+                            elif was_current_turn:
+                                room_to_notify.check_victory_and_advance()
+                                asyncio.create_task(run_ai_turns_if_needed(room_to_notify))
 
-                    await room_to_notify.broadcast()
+                        await room_to_notify.broadcast()
                 continue
 
             elif action == "RECONNECT":
                 client_id = data.get("clientId", "")
                 rid = data.get("roomId", "")
                 name = data.get("playerName", "").strip()
-                avatar = data.get("avatar", "")
+                avatar = data.get("avatar", "")[:35000]
                 if client_id in connected_users:
                     connected_users[client_id]["ws"] = ws
                     if name:
