@@ -138,7 +138,7 @@
     }
 
     .btn-xs {
-      padding: 3px 8px;
+      padding: 4px 8px;
       font-size: 0.76rem;
     }
 
@@ -288,24 +288,24 @@
     }
 
     .actor-checklist {
-      max-height: 220px;
+      max-height: 240px;
       overflow-y: auto;
       background: #fff;
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 6px;
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
       gap: 4px;
     }
 
     .actor-check-item {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 5px;
       font-size: 0.82rem;
       font-weight: normal;
-      padding: 4px 6px;
+      padding: 5px 6px;
       border-radius: 4px;
       cursor: pointer;
       margin: 0;
@@ -319,6 +319,9 @@
     .actor-check-item.checked {
       background: #eff6ff;
       border-color: #bfdbfe;
+    }
+
+    .actor-check-item.checked .actor-name-txt {
       font-weight: bold;
     }
 
@@ -326,15 +329,18 @@
       color: var(--muted);
       font-size: 0.72rem;
       min-width: 24px;
+      margin-top: 1px;
+    }
+
+    .matched-anime-tag {
+      display: block;
+      font-size: 0.7rem;
+      color: var(--primary);
+      margin-top: 2px;
+      line-height: 1.2;
     }
 
     /* チャットボックス */
-    .chat-section {
-      margin-top: 14px;
-      border-top: 1px solid var(--border);
-      padding-top: 12px;
-    }
-
     .chat-messages {
       height: 150px;
       overflow-y: auto;
@@ -633,6 +639,18 @@
         </div>
       </div>
 
+      <!-- ホーム画面チャット（全体チャット） -->
+      <div class="card-box" id="homeChatCard">
+        <h2>💬 ロビー全体チャット</h2>
+        <div class="chat-messages" id="homeChatMessages"></div>
+        <div class="chat-input-bar">
+          <input type="text" id="homeChatInput" placeholder="アクセス中のメンバーに挨拶やメッセージを送れます..." maxlength="200"
+            onkeydown="if(event.key==='Enter') sendChat('homeChatInput')" />
+          <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
+            onclick="sendChat('homeChatInput')">送信</button>
+        </div>
+      </div>
+
       <div class="grid-2" id="setupPanels">
         <!-- ルーム作成 -->
         <div class="card-box">
@@ -660,16 +678,19 @@
           </div>
           <div id="aiConfigContainer"></div>
 
-          <!-- 使用する声優の個別選択＆検索 -->
+          <!-- 使用する声優の個別選択＆声優名・アニメ名検索 -->
           <div class="form-row">
             <label>使用する声優を選択（選択中: <span id="selectedActorCountSpan" style="color:var(--primary);">0</span> / <span
                 id="maxActorSpan">0</span>名）</label>
             <div class="actor-selector-box">
-              <input type="text" id="actorSearchInput" placeholder="🔍 声優名で検索..." oninput="renderActorChecklist()" />
+              <input type="text" id="actorSearchInput" placeholder="🔍 声優名 または アニメ名で検索..."
+                oninput="renderActorChecklist()" />
               <div class="actor-bulk-btns">
                 <button type="button" class="btn btn-outline btn-xs" onclick="selectTopActors(220)">上位220名に戻す</button>
-                <button type="button" class="btn btn-outline btn-xs" onclick="selectAllActors(true)">全選択</button>
-                <button type="button" class="btn btn-outline btn-xs" onclick="selectAllActors(false)">全解除</button>
+                <button type="button" class="btn btn-outline btn-xs"
+                  onclick="selectFilteredActors(true)">表示中を全選択</button>
+                <button type="button" class="btn btn-outline btn-xs"
+                  onclick="selectFilteredActors(false)">表示中を全解除</button>
               </div>
               <div class="actor-checklist" id="actorChecklistContainer"></div>
             </div>
@@ -704,12 +725,11 @@
         <button class="btn btn-primary hidden" id="startGameBtn" onclick="startGame()">このメンバーでゲーム開始</button>
         <p id="waitingHostText" style="text-align:center;color:var(--muted);font-weight:bold;">ホストの開始を待っています...</p>
 
-        <!-- ロビーチャット -->
-        <div class="chat-section">
-          <label>💬 ロビーチャット</label>
+        <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:12px;">
+          <label>💬 ルームチャット</label>
           <div class="chat-messages" id="lobbyChatMessages"></div>
           <div class="chat-input-bar">
-            <input type="text" id="lobbyChatInput" placeholder="挨拶やメッセージを入力..." maxlength="200"
+            <input type="text" id="lobbyChatInput" placeholder="ルーム内のメンバーとチャット..." maxlength="200"
               onkeydown="if(event.key==='Enter') sendChat('lobbyChatInput')" />
             <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
               onclick="sendChat('lobbyChatInput')">送信</button>
@@ -754,35 +774,37 @@
         <div id="animeSelectArea" class="hidden" style="margin-top:12px;"></div>
         <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;" id="controlButtons"></div>
         <p class="alert-msg" id="gameAlert"></p>
-        <p class="key-guide">⌨️ キーボード操作: [1]〜[9] 選択 / [0] スキップ / [a] 未登録作品として強制出し / [Esc] 選択解除</p>
+        <p class="key-guide">⌨️ キーボード操作: [1]〜[9] 選択（手札・場はいつでも上書き可） / [0] スキップ / [a] 未登録作品として強制出し / [Esc] 選択解除</p>
       </div>
 
-      <!-- 対戦ログ＆結果画面チャット -->
-      <div class="card-box">
-        <h2>📜 対戦ログ</h2>
-        <div class="log-box" id="logBox"></div>
-        <div id="resultActions" class="hidden">
-          <div class="result-btn-group">
-            <button class="btn btn-primary hidden" id="rematchBtn" onclick="restartGame()">🔄 同じメンバー・設定でもう一度プレイ</button>
-            <button class="btn btn-outline" onclick="leaveRoom()">ホームに戻る（退出）</button>
-          </div>
-          <p id="waitingRematchText" class="hidden"
-            style="text-align:center;color:var(--muted);font-weight:bold;margin-top:8px;">
-            ホストが次の試合を開始するのを待っています...
-          </p>
+      <!-- 対戦ログ＆ゲーム中/結果画面チャット -->
+      <div class="grid-2">
+        <div class="card-box">
+          <h2>📜 対戦ログ</h2>
+          <div class="log-box" id="logBox" style="height:210px;"></div>
+        </div>
 
-          <!-- 結果画面チャット -->
-          <div class="chat-section">
-            <label>💬 感想戦チャット</label>
-            <div class="chat-messages" id="resultChatMessages"></div>
-            <div class="chat-input-bar">
-              <input type="text" id="resultChatInput" placeholder="お疲れさまでした！など..." maxlength="200"
-                onkeydown="if(event.key==='Enter') sendChat('resultChatInput')" />
-              <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
-                onclick="sendChat('resultChatInput')">送信</button>
-            </div>
+        <div class="card-box">
+          <h2>💬 ルームチャット</h2>
+          <div class="chat-messages" id="gameChatMessages" style="height:160px;"></div>
+          <div class="chat-input-bar">
+            <input type="text" id="gameChatInput" placeholder="試合中の会話や感想戦に..." maxlength="200"
+              onkeydown="if(event.key==='Enter') sendChat('gameChatInput')" />
+            <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
+              onclick="sendChat('gameChatInput')">送信</button>
           </div>
         </div>
+      </div>
+
+      <div id="resultActions" class="card-box hidden">
+        <div class="result-btn-group" style="margin-top:0;">
+          <button class="btn btn-primary hidden" id="rematchBtn" onclick="restartGame()">🔄 同じメンバー・設定でもう一度プレイ</button>
+          <button class="btn btn-outline" onclick="leaveRoom()">ホームに戻る（退出）</button>
+        </div>
+        <p id="waitingRematchText" class="hidden"
+          style="text-align:center;color:var(--muted);font-weight:bold;margin-top:8px;">
+          ホストが次の試合を開始するのを待っています...
+        </p>
       </div>
     </div>
   </main>
@@ -817,7 +839,9 @@
     let hasAnnouncedInitialLogin = false;
 
     let allActorsMaster = [];
+    let actorAnimesMaster = {};
     let selectedActorSet = new Set();
+    let globalChatList = [];
 
     let state = null;
     let uiStep = "SELECT_HAND";
@@ -917,24 +941,45 @@
       }
     }
 
-    // --------- 声優一覧・検索・ON/OFF選択 ---------
+    // --------- 声優一覧・声優名＆アニメ名検索・一括ON/OFF選択 ---------
     fetch("/api/meta").then(r => r.json()).then(d => {
       allActorsMaster = d.actors || [];
+      actorAnimesMaster = d.actorAnimes || {};
       document.getElementById("maxActorSpan").textContent = allActorsMaster.length;
       selectTopActors(220);
     });
+
+    function getFilteredActors() {
+      const keyword = (document.getElementById("actorSearchInput").value || "").trim().toLowerCase();
+      if (!keyword) {
+        return allActorsMaster.map((actor, idx) => ({ actor, idx, matchedAnimes: [] }));
+      }
+      const results = [];
+      allActorsMaster.forEach((actor, idx) => {
+        const nameMatch = actor.toLowerCase().includes(keyword);
+        const animes = actorAnimesMaster[actor] || [];
+        const matchedAnimes = animes.filter(title => title.toLowerCase().includes(keyword));
+        if (nameMatch || matchedAnimes.length > 0) {
+          results.push({ actor, idx, matchedAnimes });
+        }
+      });
+      return results;
+    }
 
     function selectTopActors(n) {
       selectedActorSet = new Set(allActorsMaster.slice(0, Math.min(n, allActorsMaster.length)));
       renderActorChecklist();
     }
 
-    function selectAllActors(flag) {
-      if (flag) {
-        selectedActorSet = new Set(allActorsMaster);
-      } else {
-        selectedActorSet.clear();
-      }
+    function selectFilteredActors(flag) {
+      const filtered = getFilteredActors();
+      filtered.forEach(item => {
+        if (flag) {
+          selectedActorSet.add(item.actor);
+        } else {
+          selectedActorSet.delete(item.actor);
+        }
+      });
       renderActorChecklist();
     }
 
@@ -948,27 +993,35 @@
     }
 
     function renderActorChecklist() {
-      const keyword = (document.getElementById("actorSearchInput").value || "").trim().toLowerCase();
+      const filtered = getFilteredActors();
       const container = document.getElementById("actorChecklistContainer");
       document.getElementById("selectedActorCountSpan").textContent = selectedActorSet.size;
 
       let html = "";
-      allActorsMaster.forEach((actor, idx) => {
-        if (keyword && !actor.toLowerCase().includes(keyword)) return;
+      filtered.forEach(({ actor, idx, matchedAnimes }) => {
         const checked = selectedActorSet.has(actor);
         const safeName = escapeHtml(actor);
+        let animeHint = "";
+        if (matchedAnimes.length > 0) {
+          const preview = matchedAnimes.slice(0, 2).map(escapeHtml).join(" / ");
+          const more = matchedAnimes.length > 2 ? ` 他${matchedAnimes.length - 2}作` : "";
+          animeHint = `<span class="matched-anime-tag">🎬 ${preview}${more}</span>`;
+        }
         html += `
           <label class="actor-check-item ${checked ? "checked" : ""}">
-            <input type="checkbox" ${checked ? "checked" : ""} onchange="toggleActorSelection(this.dataset.actor, this.checked); this.parentElement.classList.toggle('checked', this.checked);" data-actor="${safeName}" />
+            <input type="checkbox" style="margin-top:3px;" ${checked ? "checked" : ""} onchange="toggleActorSelection(this.dataset.actor, this.checked); this.parentElement.classList.toggle('checked', this.checked);" data-actor="${safeName}" />
             <span class="actor-idx-num">${idx + 1}.</span>
-            <span>${safeName}</span>
+            <span>
+              <span class="actor-name-txt">${safeName}</span>
+              ${animeHint}
+            </span>
           </label>
         `;
       });
-      container.innerHTML = html || `<div style="padding:8px;color:var(--muted);font-size:0.82rem;">該当する声優がいません</div>`;
+      container.innerHTML = html || `<div style="padding:8px;color:var(--muted);font-size:0.82rem;">該当する声優・作品が見つかりません</div>`;
     }
 
-    // --------- チャット送信・描画 ---------
+    // --------- チャット送信・描画（全画面共通） ---------
     function sendChat(inputId) {
       const inp = document.getElementById(inputId);
       const text = inp.value.trim();
@@ -981,28 +1034,31 @@
       inp.value = "";
     }
 
-    function renderChatBoxes(messages) {
+    function renderSingleChatBox(boxId, messages) {
+      const box = document.getElementById(boxId);
+      if (!box) return;
       const list = messages || [];
-      ["lobbyChatMessages", "resultChatMessages"].forEach(boxId => {
-        const box = document.getElementById(boxId);
-        if (!box) return;
-        let html = "";
-        list.forEach(m => {
-          const isMe = m.clientId === clientId;
-          const av = getAvatarSrc(m.avatar, false);
-          html += `
-            <div class="chat-row ${isMe ? "me" : ""}">
-              <img class="avatar-sm" src="${av}" style="margin-top:2px;" />
-              <div class="chat-bubble">
-                <div class="chat-meta">${escapeHtml(m.name)} ・ ${escapeHtml(m.time || "")}</div>
-                <div>${escapeHtml(m.text)}</div>
-              </div>
+      let html = "";
+      list.forEach(m => {
+        const isMe = m.clientId === clientId;
+        const av = getAvatarSrc(m.avatar, false);
+        html += `
+          <div class="chat-row ${isMe ? "me" : ""}">
+            <img class="avatar-sm" src="${av}" style="margin-top:2px;" />
+            <div class="chat-bubble">
+              <div class="chat-meta">${escapeHtml(m.name)} ・ ${escapeHtml(m.time || "")}</div>
+              <div>${escapeHtml(m.text)}</div>
             </div>
-          `;
-        });
-        box.innerHTML = html || `<div style="color:var(--muted);font-size:0.8rem;text-align:center;margin-top:45px;">まだメッセージはありません</div>`;
-        box.scrollTop = box.scrollHeight;
+          </div>
+        `;
       });
+      box.innerHTML = html || `<div style="color:var(--muted);font-size:0.8rem;text-align:center;margin-top:45px;">まだメッセージはありません</div>`;
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function renderRoomChatBoxes(messages) {
+      renderSingleChatBox("lobbyChatMessages", messages);
+      renderSingleChatBox("gameChatMessages", messages);
     }
 
     // --------- WebSocket接続 ---------
@@ -1070,9 +1126,14 @@
           renderOnlineUsers(msg.users);
           return;
         }
+        if (msg.type === "GLOBAL_CHAT_UPDATE") {
+          globalChatList = msg.chatMessages || [];
+          renderSingleChatBox("homeChatMessages", globalChatList);
+          return;
+        }
         if (msg.type === "CHAT_UPDATE") {
           if (state) state.chatMessages = msg.chatMessages;
-          renderChatBoxes(msg.chatMessages);
+          renderRoomChatBoxes(msg.chatMessages);
           return;
         }
         if (msg.type === "LEFT_ROOM_OK" || msg.type === "SESSION_EXPIRED") {
@@ -1082,8 +1143,10 @@
           resetSelection();
           document.getElementById("gameView").classList.add("hidden");
           document.getElementById("homeView").classList.remove("hidden");
+          document.getElementById("homeChatCard").classList.remove("hidden");
           document.getElementById("setupPanels").classList.remove("hidden");
           document.getElementById("lobbyPanel").classList.add("hidden");
+          renderSingleChatBox("homeChatMessages", globalChatList);
           return;
         }
         if (msg.type === "ERROR") {
@@ -1093,7 +1156,7 @@
         if (msg.type === "ANIME_OPTIONS") {
           if (msg.options.length === 0) {
             document.getElementById("gameAlert").textContent =
-              "❌ 共演アニメが見つかりませんでした。（未登録作品の場合は [a] キーで強制出しできます）";
+              "❌ 共演アニメが見つかりませんでした。（別の手札・場を選び直すか、[a] キーで強制出しできます）";
             uiStep = "SELECT_FIELD";
             renderGame();
             return;
@@ -1273,11 +1336,12 @@
 
     function renderAll() {
       if (!state) return;
-      renderChatBoxes(state.chatMessages);
+      renderRoomChatBoxes(state.chatMessages);
 
       if (state.phase === "LOBBY") {
         document.getElementById("homeView").classList.remove("hidden");
         document.getElementById("gameView").classList.add("hidden");
+        document.getElementById("homeChatCard").classList.add("hidden");
         document.getElementById("setupPanels").classList.add("hidden");
         document.getElementById("lobbyPanel").classList.remove("hidden");
         document.getElementById("lobbyRoomId").textContent = state.roomId;
@@ -1346,10 +1410,12 @@
           </div>`;
       });
 
+      // 場のカード（SELECT_FIELD / SELECT_ANIME のどちらでも番号を表示して上書き可能に）
+      const canSelectField = isMyTurn && (uiStep === "SELECT_FIELD" || uiStep === "SELECT_ANIME");
       const fieldRow = document.getElementById("fieldCardsRow");
       fieldRow.innerHTML = "";
       state.field.forEach((fc, idx) => {
-        const numBadge = (isMyTurn && uiStep === "SELECT_FIELD") ? `<span class="key-badge">${idx + 1}</span>` : "";
+        const numBadge = canSelectField ? `<span class="key-badge">${idx + 1}</span>` : "";
         const selCls = (selectedFieldIdx === idx) ? "selected" : "";
         fieldRow.innerHTML += `
           <div class="actor-card field-card ${selCls}" onclick="onSelectField(${idx})">
@@ -1357,12 +1423,14 @@
           </div>`;
       });
 
+      // 自分の手札（SELECT_DISCARD以外はいつでもクリックで手札選択を上書き可能）
+      const canSelectHand = isMyTurn && uiStep !== "SELECT_DISCARD";
+      const showHandNum = isMyTurn && (uiStep === "SELECT_HAND" || uiStep === "SELECT_DISCARD");
       const handRow = document.getElementById("handCardsRow");
       handRow.innerHTML = "";
       if (me) {
         me.hand.forEach((hc, idx) => {
-          const showNum = isMyTurn && (uiStep === "SELECT_HAND" || uiStep === "SELECT_DISCARD");
-          const numBadge = showNum ? `<span class="key-badge">${idx + 1}</span>` : "";
+          const numBadge = showHandNum ? `<span class="key-badge">${idx + 1}</span>` : "";
           const selCls = (selectedHandCard === hc) ? "selected" : "";
           handRow.innerHTML += `
             <div class="actor-card ${selCls}" onclick="onSelectHand(${idx})">
@@ -1407,14 +1475,14 @@
           stepTitle.textContent = "① 出す手札を選んでください（数字キー 1〜 / 0でスキップ）";
           ctrlBtns.innerHTML = `<button class="btn btn-outline" onclick="triggerSkip()">[0] スキップ（手札交換）</button>`;
         } else if (uiStep === "SELECT_FIELD") {
-          stepTitle.textContent = `② 『${selectedHandCard}』を重ねる場のカードを選んでください（1〜3）`;
+          stepTitle.textContent = `② 『${selectedHandCard}』を重ねる場のカードを選んでください（別の手札クリックで変更可）`;
           let btns = `<button class="btn btn-outline" onclick="resetSelection();renderGame();">[Esc] 手札選択に戻る</button>`;
           if (selectedFieldIdx !== null) {
             btns += `<button class="btn btn-force" onclick="forcePlayWildcard()">[a] 未登録作品として強制出し</button>`;
           }
           ctrlBtns.innerHTML = btns;
         } else if (uiStep === "SELECT_ANIME") {
-          stepTitle.textContent = "③ 共演アニメを選んでください（数字キーで確定 / [a]で未登録作品として出す）";
+          stepTitle.textContent = "③ 共演アニメを選んでください（別の手札・場をクリックで変更可）";
           let html = "";
           currentAnimeOptions.forEach((opt, i) => {
             html += `<button class="anime-choice" onclick="confirmPlay(${i})">
@@ -1425,7 +1493,7 @@
           animeArea.innerHTML = html;
           animeArea.classList.remove("hidden");
           ctrlBtns.innerHTML = `
-            <button class="btn btn-outline" onclick="uiStep='SELECT_FIELD';renderGame();">[Esc] 場の選択に戻る</button>
+            <button class="btn btn-outline" onclick="resetSelection();renderGame();">[Esc] 選択を解除</button>
             <button class="btn btn-force" onclick="forcePlayWildcard()">[a] 未登録作品として強制出し</button>
           `;
         } else if (uiStep === "SELECT_DISCARD") {
@@ -1439,27 +1507,37 @@
       logBox.scrollTop = logBox.scrollHeight;
     }
 
+    // 手札選択：SELECT_DISCARD 以外の全ステップで即座に上書き
     function onSelectHand(idx) {
       if (!state || state.phase !== "PLAYING" || state.currentPid !== state.myPid) return;
       const me = state.players[state.myPid];
       if (!me || me.finished || !me.hand[idx]) return;
 
-      if (uiStep === "SELECT_HAND") {
-        selectedHandCard = me.hand[idx];
-        selectedFieldIdx = null;
-        uiStep = "SELECT_FIELD";
-        document.getElementById("gameAlert").textContent = "";
-        renderGame();
-      } else if (uiStep === "SELECT_DISCARD") {
+      if (uiStep === "SELECT_DISCARD") {
         sendSafe({ action: "SKIP_TURN", mode: "EXCHANGE", discardIdx: idx });
         resetSelection();
+        return;
       }
+
+      selectedHandCard = me.hand[idx];
+      selectedFieldIdx = null;
+      currentAnimeOptions = [];
+      uiStep = "SELECT_FIELD";
+      document.getElementById("gameAlert").textContent = "";
+      renderGame();
     }
 
+    // 場のカード選択：SELECT_FIELD でも SELECT_ANIME でも即座に上書きして再検索
     function onSelectField(fIdx) {
       if (!state || state.phase !== "PLAYING" || state.currentPid !== state.myPid) return;
-      if (uiStep !== "SELECT_FIELD") return;
+      if (uiStep !== "SELECT_FIELD" && uiStep !== "SELECT_ANIME") return;
+      if (!selectedHandCard) return;
+
       selectedFieldIdx = fIdx;
+      currentAnimeOptions = [];
+      document.getElementById("gameAlert").textContent = "";
+      renderGame();
+
       sendSafe({
         action: "CHECK_ANIME",
         handCard: selectedHandCard,

@@ -23,6 +23,7 @@ CHARACTER_FILE = BASE_DIR / "キャラ表2.xlsx"
 print("Excelファイルを省メモリモードで読み込んでいます...")
 
 character_map: Dict[str, Dict[str, List[str]]] = {}
+actor_animes_map: Dict[str, List[str]] = {}
 all_actors: List[str] = []
 
 wb_char = openpyxl.load_workbook(CHARACTER_FILE, read_only=True, data_only=True)
@@ -30,7 +31,9 @@ ws_char = wb_char.active
 char_rows = ws_char.iter_rows(values_only=True)
 
 header_row = next(char_rows, None)
-anime_titles_for_char = [str(c).strip() if c is not None else "" for c in (header_row[1:] if header_row else [])]
+anime_titles_for_char = [
+    str(c).strip() if c is not None else "" for c in (header_row[1:] if header_row else [])
+]
 
 # 1行目（放送年行など）をスキップ
 next(char_rows, None)
@@ -42,6 +45,7 @@ for row in char_rows:
     if not actor or actor in ("nan", "NaN", "None"):
         continue
     all_actors.append(actor)
+    actor_animes_map.setdefault(actor, [])
 
     for c_idx, cell in enumerate(row[1:]):
         if cell is None or c_idx >= len(anime_titles_for_char):
@@ -55,6 +59,7 @@ for row in char_rows:
         roles = [r.strip() for r in cell_str.split("`") if r.strip()]
         if roles:
             character_map.setdefault(anime_title, {}).setdefault(actor, []).extend(roles)
+            actor_animes_map[actor].append(anime_title)
 
 wb_char.close()
 
@@ -130,8 +135,37 @@ def get_first_character(anime: str, actor: str) -> str:
     return roles[0] if roles else "？"
 
 
-# --------- グローバル接続ユーザー管理 ---------
+# --------- グローバル接続ユーザー＆全体チャット管理 ---------
 connected_users: Dict[str, dict] = {}
+global_chat_messages: List[dict] = []
+
+
+def add_global_chat(client_id: str, name: str, avatar: str, text: str):
+    jst = datetime.timezone(datetime.timedelta(hours=9))
+    now_str = datetime.datetime.now(jst).strftime("%H:%M")
+    global_chat_messages.append({
+        "clientId": client_id,
+        "name": name,
+        "avatar": avatar,
+        "text": text,
+        "time": now_str,
+    })
+    if len(global_chat_messages) > 80:
+        global_chat_messages.pop(0)
+
+
+async def broadcast_global_chat():
+    payload = json.dumps(
+        {"type": "GLOBAL_CHAT_UPDATE", "chatMessages": global_chat_messages},
+        ensure_ascii=False,
+    )
+    for u in list(connected_users.values()):
+        ws = u.get("ws")
+        if ws:
+            try:
+                await ws.send_text(payload)
+            except Exception:
+                pass
 
 
 def get_user_status(u: dict) -> str:
@@ -568,6 +602,7 @@ async def get_meta():
     return {
         "totalActors": len(all_actors),
         "actors": all_actors,
+        "actorAnimes": actor_animes_map,
     }
 
 
@@ -602,6 +637,12 @@ async def websocket_endpoint(ws: WebSocket):
                     "ws": ws,
                     "room_id": room_id,
                 }
+                await ws.send_text(
+                    json.dumps(
+                        {"type": "GLOBAL_CHAT_UPDATE", "chatMessages": global_chat_messages},
+                        ensure_ascii=False,
+                    )
+                )
                 if room_id and room_id in rooms:
                     r = rooms[room_id]
                     for h in r.lobby_humans:
@@ -636,14 +677,18 @@ async def websocket_endpoint(ws: WebSocket):
                     await broadcast_online_users()
                 continue
 
-            if action == "SEND_CHAT" and current_room:
+            if action == "SEND_CHAT":
                 text = str(data.get("text", "")).strip()[:200]
                 if text:
                     u = connected_users.get(client_id, {})
                     name = u.get("name") or data.get("playerName", "プレイヤー")
                     avatar = u.get("avatar", "")
-                    current_room.add_chat(client_id, name, avatar, text)
-                    await current_room.broadcast_chat_only()
+                    if current_room:
+                        current_room.add_chat(client_id, name, avatar, text)
+                        await current_room.broadcast_chat_only()
+                    else:
+                        add_global_chat(client_id, name, avatar, text)
+                        await broadcast_global_chat()
                 continue
 
             if action == "CREATE_ROOM":
