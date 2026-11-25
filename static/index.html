@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -17,237 +18,751 @@
       --muted: #64748b;
       --border: #cbd5e1;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif; }
-    body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
-    header {
-      background: #0f172a; color: #fff; padding: 12px 20px;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    header h1 { font-size: 1.05rem; letter-spacing: 0.04em; }
-    .badge { background: var(--primary); padding: 3px 10px; border-radius: 999px; font-size: 0.78rem; font-weight: bold; }
-    main { max-width: 980px; width: 100%; margin: 16px auto; padding: 0 12px; flex: 1; }
-    .hidden { display: none !important; }
-    .card-box {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-      padding: 18px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-    }
-    h2 { font-size: 1.05rem; margin-bottom: 12px; border-left: 4px solid var(--primary); padding-left: 8px; }
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
 
-    .form-row { margin-bottom: 10px; }
-    label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 4px; color: #334155; }
-    input[type="text"], input[type="number"], select {
-      width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
     }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #0f172a;
+      color: #fff;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 1.05rem;
+      letter-spacing: 0.04em;
+    }
+
+    .badge {
+      background: var(--primary);
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: bold;
+    }
+
+    main {
+      max-width: 980px;
+      width: 100%;
+      margin: 16px auto;
+      padding: 0 12px;
+      flex: 1;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .card-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+
+    h2 {
+      font-size: 1.05rem;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--primary);
+      padding-left: 8px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 720px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-row {
+      margin-bottom: 10px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: bold;
+      margin-bottom: 4px;
+      color: #334155;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+
     .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-      padding: 10px 16px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;
-      font-size: 0.95rem; transition: 0.15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.95rem;
+      transition: 0.15s;
     }
-    .btn-sm { padding: 5px 10px; font-size: 0.82rem; }
-    .btn-xs { padding: 4px 8px; font-size: 0.76rem; }
-    .btn-primary { background: var(--primary); color: #fff; width: 100%; }
-    .btn-primary:hover { background: var(--primary-hover); }
-    .btn-accent { background: var(--accent); color: #111; width: 100%; }
-    .btn-outline { background: #fff; border: 1px solid var(--border); color: var(--text); }
-    .btn-outline:hover { background: #f8fafc; }
-    .btn-danger { background: var(--danger); color: #fff; }
-    .btn-force { background: #7c3aed; color: #fff; }
-    .btn-force:hover { background: #6d28d9; }
-    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-sm {
+      padding: 5px 10px;
+      font-size: 0.82rem;
+    }
+
+    .btn-xs {
+      padding: 4px 8px;
+      font-size: 0.76rem;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      width: 100%;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #111;
+      width: 100%;
+    }
+
+    .btn-outline {
+      background: #fff;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .btn-outline:hover {
+      background: #f8fafc;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn-force {
+      background: #7c3aed;
+      color: #fff;
+    }
+
+    .btn-force:hover {
+      background: #6d28d9;
+    }
+
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
 
     /* スマホ通知風トースト */
     .toast-container {
-      position: fixed; top: 14px; right: 14px; z-index: 9999;
-      display: flex; flex-direction: column; gap: 8px; max-width: 330px; width: calc(100% - 28px);
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-width: 330px;
+      width: calc(100% - 28px);
       pointer-events: none;
     }
+
     .toast-banner {
-      display: flex; align-items: center; gap: 10px;
-      background: rgba(15, 23, 42, 0.95); color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(15, 23, 42, 0.95);
+      color: #fff;
       backdrop-filter: blur(8px);
       border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 14px; padding: 10px 14px;
+      border-radius: 14px;
+      padding: 10px 14px;
       box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
       animation: slideInToast 0.3s ease-out, fadeOutToast 0.4s ease-in 3.8s forwards;
     }
+
     .toast-banner.turn-alert {
       background: rgba(120, 53, 15, 0.96);
       border-color: #fbbf24;
     }
+
     @keyframes slideInToast {
-      from { transform: translateY(-20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+      from {
+        transform: translateY(-20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
+
     @keyframes fadeOutToast {
-      from { opacity: 1; }
-      to { opacity: 0; }
+      from {
+        opacity: 1;
+      }
+
+      to {
+        opacity: 0;
+      }
     }
 
     /* アイコン表示 */
     .avatar-setup {
-      display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
     }
+
     .avatar-preview {
-      width: 54px; height: 54px; border-radius: 50%; object-fit: cover;
-      border: 2px solid var(--primary); background: #e2e8f0; flex-shrink: 0;
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--primary);
+      background: #e2e8f0;
+      flex-shrink: 0;
     }
+
     .avatar-sm {
-      width: 24px; height: 24px; border-radius: 50%; object-fit: cover;
-      vertical-align: middle; border: 1px solid var(--border); background: #e2e8f0; flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      object-fit: cover;
+      vertical-align: middle;
+      border: 1px solid var(--border);
+      background: #e2e8f0;
+      flex-shrink: 0;
     }
+
     .user-inline {
-      display: inline-flex; align-items: center; gap: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
     /* 部屋一覧カード */
     .room-card {
-      border: 1px solid var(--border); border-radius: 8px; padding: 12px;
-      background: #f8fafc; margin-bottom: 10px;
-      display: flex; flex-direction: column; gap: 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      background: #f8fafc;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
+
     .room-card-header {
-      display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
     }
+
     .room-card-title {
-      font-weight: bold; font-size: 1rem; color: var(--text);
+      font-weight: bold;
+      font-size: 1rem;
+      color: var(--text);
     }
+
     .room-card-desc {
-      font-size: 0.84rem; color: #334155; background: #fff;
-      padding: 6px 8px; border-radius: 6px; border: 1px solid #e2e8f0;
+      font-size: 0.84rem;
+      color: #334155;
+      background: #fff;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
     }
+
     .room-card-meta {
-      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between;
-      font-size: 0.8rem; color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--muted);
     }
+
     .phase-badge {
-      padding: 2px 8px; border-radius: 999px; font-size: 0.74rem; font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: bold;
     }
-    .phase-lobby { background: #dcfce7; color: #166534; }
-    .phase-playing { background: #fef3c7; color: #92400e; }
-    .phase-result { background: #e2e8f0; color: #334155; }
+
+    .phase-lobby {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .phase-playing {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .phase-result {
+      background: #e2e8f0;
+      color: #334155;
+    }
 
     /* 声優選択リスト */
     .actor-selector-box {
-      border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      background: #f8fafc;
     }
+
     .actor-bulk-btns {
-      display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 6px 0;
     }
+
     .actor-checklist {
-      max-height: 220px; overflow-y: auto; background: #fff;
-      border: 1px solid var(--border); border-radius: 6px; padding: 6px;
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 4px;
+      max-height: 220px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 4px;
     }
+
     .actor-check-item {
-      display: flex; align-items: flex-start; gap: 5px; font-size: 0.82rem; font-weight: normal;
-      padding: 5px 6px; border-radius: 4px; cursor: pointer; margin: 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 5px;
+      font-size: 0.82rem;
+      font-weight: normal;
+      padding: 5px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 0;
       border: 1px solid transparent;
     }
-    .actor-check-item:hover { background: #eff6ff; }
-    .actor-check-item.checked { background: #eff6ff; border-color: #bfdbfe; }
-    .actor-check-item.checked .actor-name-txt { font-weight: bold; }
-    .actor-idx-num { color: var(--muted); font-size: 0.72rem; min-width: 24px; margin-top: 1px; }
+
+    .actor-check-item:hover {
+      background: #eff6ff;
+    }
+
+    .actor-check-item.checked {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+
+    .actor-check-item.checked .actor-name-txt {
+      font-weight: bold;
+    }
+
+    .actor-idx-num {
+      color: var(--muted);
+      font-size: 0.72rem;
+      min-width: 24px;
+      margin-top: 1px;
+    }
+
     .matched-anime-tag {
-      display: block; font-size: 0.7rem; color: var(--primary); margin-top: 2px; line-height: 1.2;
+      display: block;
+      font-size: 0.7rem;
+      color: var(--primary);
+      margin-top: 2px;
+      line-height: 1.2;
     }
 
-    /* チャットボックス */
+    /* チャットボックス（写真・システムログ対応） */
     .chat-messages {
-      height: 150px; overflow-y: auto; background: #f8fafc; border: 1px solid var(--border);
-      border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;
-      display: flex; flex-direction: column; gap: 6px;
+      height: 170px;
+      overflow-y: auto;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
-    .chat-row {
-      display: flex; align-items: flex-start; gap: 8px; font-size: 0.86rem;
-    }
-    .chat-bubble {
-      background: #fff; border: 1px solid var(--border); border-radius: 8px;
-      padding: 5px 10px; max-width: 85%; word-break: break-word;
-    }
-    .chat-row.me .chat-bubble {
-      background: #dbeafe; border-color: #93c5fd;
-    }
-    .chat-meta {
-      font-size: 0.72rem; color: var(--muted); margin-bottom: 2px;
-    }
-    .chat-input-bar {
-      display: flex; gap: 6px;
-    }
-    .chat-input-bar input { flex: 1; }
 
-    .ai-item { background: #f8fafc; border: 1px solid var(--border); padding: 8px; border-radius: 6px; margin-bottom: 6px; }
-    .lobby-list { list-style: none; margin: 10px 0; }
+    .chat-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 0.86rem;
+    }
+
+    .chat-bubble {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 10px;
+      max-width: 85%;
+      word-break: break-word;
+    }
+
+    .chat-row.me .chat-bubble {
+      background: #dbeafe;
+      border-color: #93c5fd;
+    }
+
+    .chat-system-line {
+      text-align: center;
+      font-size: 0.76rem;
+      color: #475569;
+      background: #e2e8f0;
+      border-radius: 999px;
+      padding: 3px 10px;
+      align-self: center;
+      max-width: 95%;
+    }
+
+    .chat-meta {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
+
+    .chat-img {
+      max-width: 200px;
+      max-height: 160px;
+      border-radius: 6px;
+      margin-top: 4px;
+      display: block;
+      cursor: pointer;
+      border: 1px solid var(--border);
+    }
+
+    .chat-input-bar {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .chat-input-bar input[type="text"] {
+      flex: 1;
+    }
+
+    .photo-btn-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 0;
+      flex-shrink: 0;
+    }
+
+    .photo-btn-label:hover {
+      background: #f1f5f9;
+    }
+
+    /* 観戦用：他プレイヤー手札一覧 */
+    .spectator-hands-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .spec-player-box {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .spec-player-box.active-turn {
+      border: 2px solid var(--accent);
+      background: #fffbeb;
+    }
+
+    .spec-cards-mini {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 6px;
+    }
+
+    .mini-card-tag {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 5px;
+      padding: 3px 8px;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+
+    .ai-item {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+
+    .lobby-list {
+      list-style: none;
+      margin: 10px 0;
+    }
+
     .lobby-list li {
-      padding: 8px 12px; background: #f8fafc; border: 1px solid var(--border);
-      border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
+
     .status-tag {
-      font-size: 0.78rem; padding: 2px 8px; border-radius: 999px; background: #e2e8f0; color: #334155; font-weight: bold;
+      font-size: 0.78rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      color: #334155;
+      font-weight: bold;
     }
+
     .room-header-bar {
-      display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;
-      background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 14px; border-radius: 8px; margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
     }
 
     /* ゲーム画面 */
     .status-bar {
-      display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center;
-      background: #1e293b; color: #fff; padding: 10px 14px; border-radius: 8px; margin-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e293b;
+      color: #fff;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
     }
+
     .status-right {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
     }
-    .players-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+
+    .players-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
     .p-chip {
-      display: inline-flex; align-items: center; gap: 6px;
-      background: #fff; border: 2px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fff;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
     }
-    .p-chip.active { border-color: var(--accent); background: #fffbeb; font-weight: bold; }
-    .p-chip.finished { opacity: 0.6; background: #e2e8f0; }
+
+    .p-chip.active {
+      border-color: var(--accent);
+      background: #fffbeb;
+      font-weight: bold;
+    }
+
+    .p-chip.finished {
+      opacity: 0.6;
+      background: #e2e8f0;
+    }
 
     .info-banner {
-      background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a;
-      padding: 12px 14px; border-radius: 8px; margin-bottom: 12px;
-      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
-    }
-    .eliminated-banner {
-      background: #fef2f2; border: 1px solid #fecaca; color: #991b1b;
-      padding: 12px 14px; border-radius: 8px; margin-bottom: 12px;
-      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e3a8a;
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
     }
 
-    .cards-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-    .actor-card {
-      position: relative; background: #fff; border: 2px solid var(--border); border-radius: 8px;
-      padding: 14px 16px; min-width: 120px; text-align: center; cursor: pointer; font-weight: bold;
-      transition: transform 0.1s, border-color 0.1s; user-select: none;
+    .eliminated-banner {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
     }
-    .actor-card:hover { border-color: var(--primary); transform: translateY(-2px); }
-    .actor-card.selected { border-color: var(--accent); background: #fef3c7; }
-    .actor-card.field-card { background: #eff6ff; border-color: #93c5fd; }
+
+    .cards-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .actor-card {
+      position: relative;
+      background: #fff;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      min-width: 120px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.1s, border-color 0.1s;
+      user-select: none;
+    }
+
+    .actor-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .actor-card.selected {
+      border-color: var(--accent);
+      background: #fef3c7;
+    }
+
+    .actor-card.field-card {
+      background: #eff6ff;
+      border-color: #93c5fd;
+    }
+
     .key-badge {
-      position: absolute; top: 4px; left: 6px; background: #0f172a; color: #fff;
-      font-size: 0.72rem; padding: 1px 6px; border-radius: 4px;
+      position: absolute;
+      top: 4px;
+      left: 6px;
+      background: #0f172a;
+      color: #fff;
+      font-size: 0.72rem;
+      padding: 1px 6px;
+      border-radius: 4px;
     }
 
     .anime-choice {
-      display: block; width: 100%; text-align: left; padding: 10px 12px; margin-bottom: 6px;
-      background: #f8fafc; border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      margin-bottom: 6px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
     }
-    .anime-choice:hover { background: #eff6ff; border-color: var(--primary); }
+
+    .anime-choice:hover {
+      background: #eff6ff;
+      border-color: var(--primary);
+    }
 
     .log-box {
-      background: #0f172a; color: #e2e8f0; font-size: 0.85rem; padding: 10px;
-      border-radius: 8px; height: 150px; overflow-y: auto; line-height: 1.5;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-size: 0.85rem;
+      padding: 10px;
+      border-radius: 8px;
+      height: 150px;
+      overflow-y: auto;
+      line-height: 1.5;
     }
-    .key-guide { font-size: 0.8rem; color: var(--muted); margin-top: 6px; }
-    .alert-msg { color: var(--danger); font-weight: bold; font-size: 0.9rem; margin-top: 6px; }
-    .result-btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-    .result-btn-group .btn { flex: 1; min-width: 200px; }
+
+    .key-guide {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .alert-msg {
+      color: var(--danger);
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin-top: 6px;
+    }
+
+    .result-btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .result-btn-group .btn {
+      flex: 1;
+      min-width: 200px;
+    }
   </style>
 </head>
+
 <body>
   <div id="toastContainer" class="toast-container"></div>
 
@@ -267,15 +782,16 @@
             <div>
               <label class="btn btn-outline btn-sm" style="cursor:pointer; display:inline-block;">
                 📷 写真からアイコンを選ぶ
-                <input type="file" id="avatarFileInput" accept="image/*" class="hidden" onchange="onAvatarSelected(event)" />
+                <input type="file" id="avatarFileInput" accept="image/*" class="hidden"
+                  onchange="onAvatarSelected(event)" />
               </label>
               <button class="btn btn-outline btn-sm" onclick="clearAvatar()" style="margin-left:4px;">リセット</button>
               <p style="font-size:0.75rem;color:var(--muted);margin-top:4px;">※ 選んだ写真は自動リサイズされて保存されます。</p>
             </div>
           </div>
           <div class="form-row">
-            <label>プレイヤーネーム（自動保存）</label>
-            <input type="text" id="playerNameInput" maxlength="16" oninput="onProfileChange()" />
+            <label>プレイヤーネーム（文字数制限なし・自動保存）</label>
+            <input type="text" id="playerNameInput" oninput="onProfileChange()" />
           </div>
         </div>
 
@@ -285,13 +801,19 @@
         </div>
       </div>
 
-      <!-- ホーム画面チャット（全体チャット） -->
+      <!-- ホーム画面チャット（全体チャット・写真送信対応） -->
       <div class="card-box" id="homeChatCard">
         <h2>💬 ロビー全体チャット</h2>
         <div class="chat-messages" id="homeChatMessages"></div>
         <div class="chat-input-bar">
-          <input type="text" id="homeChatInput" placeholder="アクセス中のメンバーに挨拶やメッセージを送れます..." maxlength="200" onkeydown="if(event.key==='Enter') sendChat('homeChatInput')" />
-          <button type="button" class="btn btn-primary btn-sm" style="width:auto;" onclick="sendChat('homeChatInput')">送信</button>
+          <label class="photo-btn-label" title="写真を送信">
+            📷
+            <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
+          </label>
+          <input type="text" id="homeChatInput" placeholder="アクセス中のメンバーに挨拶や写真を送れます..."
+            onkeydown="if(event.key==='Enter') sendChat('homeChatInput')" />
+          <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
+            onclick="sendChat('homeChatInput')">送信</button>
         </div>
       </div>
 
@@ -301,11 +823,11 @@
           <h2>ルームを作成する</h2>
           <div class="form-row">
             <label>ルーム名</label>
-            <input type="text" id="roomNameInput" placeholder="例: 誰でも歓迎！わいわい対戦部屋" maxlength="24" />
+            <input type="text" id="roomNameInput" placeholder="例: 誰でも歓迎！わいわい対戦部屋" />
           </div>
           <div class="form-row">
             <label>軽い説明・募集メモ（任意）</label>
-            <input type="text" id="roomDescInput" placeholder="例: 初心者OK！途中参加も歓迎です" maxlength="60" />
+            <input type="text" id="roomDescInput" placeholder="例: 初心者OK！途中参加も歓迎です" />
           </div>
           <div class="form-row">
             <label>ゲームモード</label>
@@ -332,13 +854,17 @@
 
           <!-- 使用する声優の個別選択＆声優名・アニメ名検索 -->
           <div class="form-row">
-            <label>使用する声優を選択（選択中: <span id="selectedActorCountSpan" style="color:var(--primary);">0</span> / <span id="maxActorSpan">0</span>名）</label>
+            <label>使用する声優を選択（選択中: <span id="selectedActorCountSpan" style="color:var(--primary);">0</span> / <span
+                id="maxActorSpan">0</span>名）</label>
             <div class="actor-selector-box">
-              <input type="text" id="actorSearchInput" placeholder="🔍 声優名 または アニメ名で検索..." oninput="renderActorChecklist()" />
+              <input type="text" id="actorSearchInput" placeholder="🔍 声優名 または アニメ名で検索..."
+                oninput="renderActorChecklist()" />
               <div class="actor-bulk-btns">
                 <button type="button" class="btn btn-outline btn-xs" onclick="selectTopActors(220)">上位220名に戻す</button>
-                <button type="button" class="btn btn-outline btn-xs" onclick="selectFilteredActors(true)">表示中を全選択</button>
-                <button type="button" class="btn btn-outline btn-xs" onclick="selectFilteredActors(false)">表示中を全解除</button>
+                <button type="button" class="btn btn-outline btn-xs"
+                  onclick="selectFilteredActors(true)">表示中を全選択</button>
+                <button type="button" class="btn btn-outline btn-xs"
+                  onclick="selectFilteredActors(false)">表示中を全解除</button>
               </div>
               <div class="actor-checklist" id="actorChecklistContainer"></div>
             </div>
@@ -358,6 +884,27 @@
         </div>
       </div>
 
+      <!-- 運営への作品追加リクエストフォーム -->
+      <div class="card-box" id="requestAnimeCard">
+        <h2>📮 運営へ作品・声優データの追加リクエスト</h2>
+        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">
+          表に未登録のアニメや共演ペアがあれば、ここから運営にリクエストを送れます。
+        </p>
+        <div class="grid-2">
+          <div class="form-row">
+            <label>追加してほしいアニメタイトル（必須）</label>
+            <input type="text" id="reqAnimeInput" placeholder="例: 〇〇の△△" maxlength="100" />
+          </div>
+          <div class="form-row">
+            <label>出演声優・補足メモ（任意）</label>
+            <input type="text" id="reqNoteInput" placeholder="例: 〇〇さんと△△さんが共演しています" maxlength="300" />
+          </div>
+        </div>
+        <button type="button" class="btn btn-outline" style="width:100%;" onclick="submitAnimeRequest()">📩
+          運営にリクエストを送る</button>
+        <p id="reqStatusMsg" style="font-size:0.85rem;font-weight:bold;margin-top:6px;"></p>
+      </div>
+
       <!-- 待機ロビー -->
       <div class="card-box hidden" id="lobbyPanel">
         <h2>対戦ロビー</h2>
@@ -365,7 +912,8 @@
           <div>
             <div style="font-size:1.15rem;font-weight:bold;color:var(--primary);" id="lobbyRoomName"></div>
             <div style="font-size:0.86rem;color:#334155;margin-top:3px;" id="lobbyRoomDesc"></div>
-            <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">使用声優: <strong id="lobbyActorCount">-</strong>名</div>
+            <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">使用声優: <strong
+                id="lobbyActorCount">-</strong>名</div>
           </div>
           <button class="btn btn-outline btn-sm" onclick="leaveRoom()">ホームに戻る</button>
         </div>
@@ -377,8 +925,14 @@
           <label>💬 ルームチャット</label>
           <div class="chat-messages" id="lobbyChatMessages"></div>
           <div class="chat-input-bar">
-            <input type="text" id="lobbyChatInput" placeholder="ルーム内のメンバーとチャット..." maxlength="200" onkeydown="if(event.key==='Enter') sendChat('lobbyChatInput')" />
-            <button type="button" class="btn btn-primary btn-sm" style="width:auto;" onclick="sendChat('lobbyChatInput')">送信</button>
+            <label class="photo-btn-label" title="写真を送信">
+              📷
+              <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
+            </label>
+            <input type="text" id="lobbyChatInput" placeholder="ルーム内のメンバーとチャット・写真共有..."
+              onkeydown="if(event.key==='Enter') sendChat('lobbyChatInput')" />
+            <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
+              onclick="sendChat('lobbyChatInput')">送信</button>
           </div>
         </div>
       </div>
@@ -401,7 +955,7 @@
       <!-- 途中参加（観戦待機）バナー -->
       <div id="spectatorBanner" class="info-banner hidden">
         <div>
-          <strong>👀 観戦モード（次戦から自動参加）</strong>
+          <strong>👀 観戦モード（全プレイヤーの手札公開中・次戦から自動参加）</strong>
           <div style="font-size:0.85rem;">現在の試合が終了し、次の試合が始まると自動的にプレイヤーとして参加します！</div>
         </div>
         <button class="btn btn-outline btn-sm" onclick="leaveRoom()">ホームに戻る</button>
@@ -410,8 +964,8 @@
       <!-- エンドレスモード敗退バナー -->
       <div id="eliminatedBanner" class="eliminated-banner hidden">
         <div>
-          <strong>💀 手札上限に到達したため敗退しました</strong>
-          <div style="font-size:0.85rem;">他のプレイヤーの対戦を見守るか、ルームを退出してホームに戻ることができます。</div>
+          <strong>💀 手札上限に到達したため敗退しました（観戦モードに移行）</strong>
+          <div style="font-size:0.85rem;">他のプレイヤーの手札を見ながら観戦するか、ルームを退出してホームに戻ることができます。</div>
         </div>
         <button class="btn btn-danger btn-sm" onclick="leaveRoom()">🚪 ルームを退出する</button>
       </div>
@@ -424,7 +978,7 @@
         <div class="cards-row" id="fieldCardsRow"></div>
       </div>
 
-      <!-- 自分の操作エリア -->
+      <!-- 自分の操作エリア（観戦時は非表示にして全員手札エリアを表示） -->
       <div class="card-box" id="actionPanel">
         <h2 id="stepTitle">🎴 あなたの手札</h2>
         <div class="cards-row" id="handCardsRow"></div>
@@ -434,19 +988,31 @@
         <p class="key-guide">⌨️ キーボード操作: [1]〜[9] 選択（手札・場はいつでも上書き可） / [0] スキップ / [a] 未登録作品として強制出し / [Esc] 選択解除</p>
       </div>
 
+      <!-- 観戦モード用：全プレイヤーの手札一覧 -->
+      <div class="card-box hidden" id="spectatorHandsPanel">
+        <h2>👀 観戦ビュー：全プレイヤーの手札一覧</h2>
+        <div class="spectator-hands-grid" id="spectatorHandsGrid"></div>
+      </div>
+
       <!-- 対戦ログ＆ゲーム中/結果画面チャット -->
       <div class="grid-2">
         <div class="card-box">
           <h2>📜 対戦ログ</h2>
-          <div class="log-box" id="logBox" style="height:210px;"></div>
+          <div class="log-box" id="logBox" style="height:225px;"></div>
         </div>
 
         <div class="card-box">
           <h2>💬 ルームチャット</h2>
-          <div class="chat-messages" id="gameChatMessages" style="height:160px;"></div>
+          <div class="chat-messages" id="gameChatMessages" style="height:175px;"></div>
           <div class="chat-input-bar">
-            <input type="text" id="gameChatInput" placeholder="試合中の会話や感想戦に..." maxlength="200" onkeydown="if(event.key==='Enter') sendChat('gameChatInput')" />
-            <button type="button" class="btn btn-primary btn-sm" style="width:auto;" onclick="sendChat('gameChatInput')">送信</button>
+            <label class="photo-btn-label" title="写真を送信">
+              📷
+              <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
+            </label>
+            <input type="text" id="gameChatInput" placeholder="試合中の会話・写真共有・感想戦に..."
+              onkeydown="if(event.key==='Enter') sendChat('gameChatInput')" />
+            <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
+              onclick="sendChat('gameChatInput')">送信</button>
           </div>
         </div>
       </div>
@@ -456,7 +1022,8 @@
           <button class="btn btn-primary hidden" id="rematchBtn" onclick="restartGame()">🔄 待機メンバーも含めてもう一度プレイ</button>
           <button class="btn btn-outline" onclick="leaveRoom()">ホームに戻る（退出）</button>
         </div>
-        <p id="waitingRematchText" class="hidden" style="text-align:center;color:var(--muted);font-weight:bold;margin-top:8px;">
+        <p id="waitingRematchText" class="hidden"
+          style="text-align:center;color:var(--muted);font-weight:bold;margin-top:8px;">
           ホストが次の試合を開始するのを待っています...
         </p>
       </div>
@@ -521,6 +1088,7 @@
         .replace(/"/g, "&quot;");
     }
 
+    // 汎用トースト通知（ログイン・チャット・自分のターン共通）
     function showToast({ title, titleColor = "#93c5fd", body, avatar = "", isTurnAlert = false }) {
       const container = document.getElementById("toastContainer");
       const toast = document.createElement("div");
@@ -549,11 +1117,12 @@
     }
 
     function showChatToast(msgObj, channelLabel) {
-      if (!msgObj || msgObj.clientId === clientId) return;
+      if (!msgObj || msgObj.isSystem || msgObj.clientId === clientId) return;
+      const preview = msgObj.text ? escapeHtml(msgObj.text) : "📷 写真を送信しました";
       showToast({
         title: `💬 ${channelLabel}（${escapeHtml(msgObj.name)}）`,
         titleColor: "#86efac",
-        body: escapeHtml(msgObj.text),
+        body: preview,
         avatar: msgObj.avatar
       });
     }
@@ -633,7 +1202,7 @@
       if (list.length === 0) {
         container.innerHTML = `
           <div style="text-align:center;padding:28px 12px;color:var(--muted);background:#f8fafc;border:1px dashed var(--border);border-radius:8px;">
-            現在公開されている部屋はありません。<br>フォームから新しいルームを作成してください！
+            現在公開されている部屋はありません。<br>左のフォームから新しいルームを作成してください！
           </div>`;
         return;
       }
@@ -752,7 +1321,7 @@
       container.innerHTML = html || `<div style="padding:8px;color:var(--muted);font-size:0.82rem;">該当する声優・作品が見つかりません</div>`;
     }
 
-    // --------- チャット送信・描画（全画面共通） ---------
+    // --------- チャット送信（テキスト＆写真）・描画 ---------
     function sendChat(inputId) {
       const inp = document.getElementById(inputId);
       const text = inp.value.trim();
@@ -760,9 +1329,57 @@
       sendSafe({
         action: "SEND_CHAT",
         playerName: getCurrentPlayerName(),
-        text
+        text,
+        image: ""
       });
       inp.value = "";
+    }
+
+    function sendChatPhoto(event) {
+      const file = event.target.files[0];
+      event.target.value = "";
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 480;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.72);
+          sendSafe({
+            action: "SEND_CHAT",
+            playerName: getCurrentPlayerName(),
+            text: "",
+            image: dataUrl
+          });
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function openImageInNewTab(src) {
+      const win = window.open();
+      if (win) {
+        win.document.write(`<img src="${src}" style="max-width:100%;height:auto;" />`);
+      }
     }
 
     function renderSingleChatBox(boxId, messages) {
@@ -771,25 +1388,77 @@
       const list = messages || [];
       let html = "";
       list.forEach(m => {
+        if (m.isSystem) {
+          html += `<div class="chat-system-line">${escapeHtml(m.text)}（${escapeHtml(m.time || "")}）</div>`;
+          return;
+        }
         const isMe = m.clientId === clientId;
         const av = getAvatarSrc(m.avatar, false);
+        const textHtml = m.text ? `<div>${escapeHtml(m.text)}</div>` : "";
+        const imgHtml = m.image
+          ? `<img class="chat-img" src="${m.image}" alt="送信画像" onclick="openImageInNewTab(this.src)" />`
+          : "";
         html += `
           <div class="chat-row ${isMe ? "me" : ""}">
             <img class="avatar-sm" src="${av}" style="margin-top:2px;" />
             <div class="chat-bubble">
               <div class="chat-meta">${escapeHtml(m.name)} ・ ${escapeHtml(m.time || "")}</div>
-              <div>${escapeHtml(m.text)}</div>
+              ${textHtml}
+              ${imgHtml}
             </div>
           </div>
         `;
       });
-      box.innerHTML = html || `<div style="color:var(--muted);font-size:0.8rem;text-align:center;margin-top:45px;">まだメッセージはありません</div>`;
+      box.innerHTML = html || `<div style="color:var(--muted);font-size:0.8rem;text-align:center;margin-top:55px;">まだメッセージはありません</div>`;
       box.scrollTop = box.scrollHeight;
     }
 
     function renderRoomChatBoxes(messages) {
       renderSingleChatBox("lobbyChatMessages", messages);
       renderSingleChatBox("gameChatMessages", messages);
+    }
+
+    // --------- 作品追加リクエスト送信 ---------
+    async function submitAnimeRequest() {
+      const animeInp = document.getElementById("reqAnimeInput");
+      const noteInp = document.getElementById("reqNoteInput");
+      const statusEl = document.getElementById("reqStatusMsg");
+      const anime = animeInp.value.trim();
+      const note = noteInp.value.trim();
+
+      if (!anime) {
+        statusEl.style.color = "var(--danger)";
+        statusEl.textContent = "※ アニメタイトルを入力してください。";
+        return;
+      }
+
+      statusEl.style.color = "var(--muted)";
+      statusEl.textContent = "送信中...";
+
+      try {
+        const res = await fetch("/api/request_anime", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sender: getCurrentPlayerName(),
+            anime,
+            note
+          })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          statusEl.style.color = "var(--success)";
+          statusEl.textContent = "✅ " + data.message;
+          animeInp.value = "";
+          noteInp.value = "";
+        } else {
+          statusEl.style.color = "var(--danger)";
+          statusEl.textContent = "❌ " + data.message;
+        }
+      } catch (e) {
+        statusEl.style.color = "var(--danger)";
+        statusEl.textContent = "❌ 通信エラーが発生しました。";
+      }
     }
 
     // --------- WebSocket接続 ---------
@@ -842,7 +1511,7 @@
       };
 
       ws.onerror = () => {
-        try { ws.close(); } catch (e) {}
+        try { ws.close(); } catch (e) { }
       };
 
       ws.onmessage = (ev) => {
@@ -890,6 +1559,7 @@
           document.getElementById("gameView").classList.add("hidden");
           document.getElementById("homeView").classList.remove("hidden");
           document.getElementById("homeChatCard").classList.remove("hidden");
+          document.getElementById("requestAnimeCard").classList.remove("hidden");
           document.getElementById("setupPanels").classList.remove("hidden");
           document.getElementById("lobbyPanel").classList.add("hidden");
           renderSingleChatBox("homeChatMessages", globalChatList);
@@ -1092,6 +1762,7 @@
         document.getElementById("homeView").classList.remove("hidden");
         document.getElementById("gameView").classList.add("hidden");
         document.getElementById("homeChatCard").classList.add("hidden");
+        document.getElementById("requestAnimeCard").classList.add("hidden");
         document.getElementById("setupPanels").classList.add("hidden");
         document.getElementById("lobbyPanel").classList.remove("hidden");
         document.getElementById("lobbyRoomName").textContent = `🏠 ${state.roomName}`;
@@ -1141,8 +1812,8 @@
 
       document.getElementById("turnBanner").textContent =
         state.phase === "RESULT" ? "🏁 ゲーム終了" :
-        isSpectator ? "👀 観戦中（次戦から参加）" :
-        isMyTurn ? "🔥 あなたのターンです！" : `⏳ ${curP.name} の思考中...`;
+          isSpectator ? "👀 観戦中（次戦から参加）" :
+            isMyTurn ? "🔥 あなたのターンです！" : `⏳ ${curP.name} の思考中...`;
 
       document.getElementById("spectatorBanner").classList.toggle("hidden", !isSpectator);
 
@@ -1167,7 +1838,6 @@
           </div>`;
       });
 
-      // 観戦待機中のメンバーがいればチップ表示
       const activeIds = new Set(state.players.filter(p => !p.leftRoom).map(p => p.id));
       state.lobbyHumans.forEach(h => {
         if (!activeIds.has(h.id)) {
@@ -1191,6 +1861,40 @@
             ${numBadge}${escapeHtml(fc)}
           </div>`;
       });
+
+      // 観戦ビュー（全プレイヤーの手札公開）の描画
+      const specPanel = document.getElementById("spectatorHandsPanel");
+      const specGrid = document.getElementById("spectatorHandsGrid");
+      const showSpectatorHands = state.phase === "PLAYING" && state.canSeeAllHands;
+      specPanel.classList.toggle("hidden", !showSpectatorHands);
+      if (showSpectatorHands) {
+        let sHtml = "";
+        state.players.forEach(p => {
+          if (p.pid === state.myPid) return;
+          const av = getAvatarSrc(p.avatar, p.isAI);
+          const isTurn = p.pid === state.currentPid && !p.finished;
+          const rankTxt = p.rank ? ` [${p.rank}位]` : "";
+          const cardsHtml = (p.hand || []).map(c => `<span class="mini-card-tag">${escapeHtml(c)}</span>`).join("");
+          sHtml += `
+            <div class="spec-player-box ${isTurn ? "active-turn" : ""}">
+              <div class="user-inline" style="font-weight:bold;font-size:0.88rem;">
+                <img class="avatar-sm" src="${av}" />
+                <span>${p.pid + 1}. ${escapeHtml(p.name)} (${p.handCount}枚)${rankTxt}</span>
+              </div>
+              <div class="spec-cards-mini">${cardsHtml || '<span style="color:var(--muted);font-size:0.78rem;">手札なし</span>'}</div>
+            </div>
+          `;
+        });
+        specGrid.innerHTML = sHtml;
+      }
+
+      // 操作パネル（途中参加の観戦者は手札を持たないので、PLAYING中は非表示）
+      const actionPanel = document.getElementById("actionPanel");
+      if (state.phase === "PLAYING" && isSpectator) {
+        actionPanel.classList.add("hidden");
+      } else {
+        actionPanel.classList.remove("hidden");
+      }
 
       const showHandNum = isMyTurn && (uiStep === "SELECT_HAND" || uiStep === "SELECT_DISCARD");
       const handRow = document.getElementById("handCardsRow");
@@ -1234,10 +1938,8 @@
         document.getElementById("waitingRematchText").classList.toggle("hidden", isHost);
       } else {
         resultActions.classList.add("hidden");
-        if (isSpectator) {
-          stepTitle.textContent = "👀 観戦中（次の試合開始時に自動で手札が配られます）";
-        } else if (me && me.finished) {
-          stepTitle.textContent = "🎴 あなたはすでに終了しています（観戦中）";
+        if (me && me.finished) {
+          stepTitle.textContent = "🎴 あなたはすでに終了しています（上の観戦ビューで全員の手札を確認できます）";
         } else if (!isMyTurn) {
           stepTitle.textContent = "🎴 あなたの手札（相手のターン待機中）";
         } else if (uiStep === "SELECT_HAND") {
@@ -1386,4 +2088,5 @@
     });
   </script>
 </body>
+
 </html>

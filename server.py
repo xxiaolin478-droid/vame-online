@@ -2,11 +2,13 @@ import asyncio
 import datetime
 import gc
 import json
+import os
 import random
 import string
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
+import httpx
 import openpyxl
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -18,6 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 COAPPEAR_FILE = BASE_DIR / "共演表.xlsx"
 CHARACTER_FILE = BASE_DIR / "キャラ表2.xlsx"
+GAS_WEBHOOK_URL = os.environ.get("GAS_WEBHOOK_URL", "").strip()
 
 # --------- 起動時にExcelを省メモリモード（openpyxl read_only）で読み込み ---------
 print("Excelファイルを省メモリモードで読み込んでいます...")
@@ -140,15 +143,20 @@ connected_users: Dict[str, dict] = {}
 global_chat_messages: List[dict] = []
 
 
-def add_global_chat(client_id: str, name: str, avatar: str, text: str):
+def now_jst_str() -> str:
     jst = datetime.timezone(datetime.timedelta(hours=9))
-    now_str = datetime.datetime.now(jst).strftime("%H:%M")
+    return datetime.datetime.now(jst).strftime("%H:%M")
+
+
+def add_global_chat(client_id: str, name: str, avatar: str, text: str, image: str = "", is_system: bool = False):
     global_chat_messages.append({
         "clientId": client_id,
         "name": name,
         "avatar": avatar,
         "text": text,
-        "time": now_str,
+        "image": image,
+        "isSystem": is_system,
+        "time": now_jst_str(),
     })
     if len(global_chat_messages) > 80:
         global_chat_messages.pop(0)
@@ -283,15 +291,15 @@ class GameRoom:
         self.logs: List[str] = []
         self.ai_known_sets: Dict[int, Dict[tuple, Set[str]]] = {}
 
-    def add_chat(self, client_id: str, name: str, avatar: str, text: str):
-        jst = datetime.timezone(datetime.timedelta(hours=9))
-        now_str = datetime.datetime.now(jst).strftime("%H:%M")
+    def add_chat(self, client_id: str, name: str, avatar: str, text: str, image: str = "", is_system: bool = False):
         self.chat_messages.append({
             "clientId": client_id,
             "name": name,
             "avatar": avatar,
             "text": text,
-            "time": now_str,
+            "image": image,
+            "isSystem": is_system,
+            "time": now_jst_str(),
         })
         if len(self.chat_messages) > 80:
             self.chat_messages.pop(0)
@@ -349,7 +357,6 @@ class GameRoom:
                 h["name"] = connected_users[h["id"]]["name"]
                 h["avatar"] = connected_users[h["id"]].get("avatar", "")
 
-        # ロビー（観戦待機含む）にいる全員をシャッフルして次戦のプレイヤーにする
         humans = [dict(h) for h in self.lobby_humans]
         random.shuffle(humans)
 
@@ -425,8 +432,16 @@ class GameRoom:
             (i for i, p in enumerate(self.players) if p["id"] == client_id and not p.get("leftRoom")),
             -1,
         )
+        # 観戦者（my_pid == -1）、すでに上がり/脱落済みのプレイヤー、または結果画面なら全員の手札を見られる
+        can_see_all_hands = (
+            self.phase == "RESULT"
+            or my_pid < 0
+            or (0 <= my_pid < len(self.players) and self.players[my_pid]["finished"])
+        )
+
         public_players = []
         for i, p in enumerate(self.players):
+            show_hand = can_see_all_hands or (i == my_pid)
             public_players.append({
                 "pid": i,
                 "id": p["id"],
@@ -435,7 +450,7 @@ class GameRoom:
                 "isAI": p["isAI"],
                 "aiPct": p["aiPct"],
                 "handCount": len(p["hand"]),
-                "hand": p["hand"] if i == my_pid else [],
+                "hand": p["hand"] if show_hand else [],
                 "usedAnime": p["usedAnime"],
                 "finished": p["finished"],
                 "rank": p["rank"],
@@ -450,6 +465,7 @@ class GameRoom:
             "hostId": self.host_id,
             "phase": self.phase,
             "matchCount": self.match_count,
+            "canSeeAllHands": can_see_all_hands,
             "settings": {
                 "endlessMode": self.settings.get("endlessMode", False),
                 "startHandSize": self.settings.get("startHandSize", 5),
@@ -648,6 +664,31 @@ async def get_meta():
     }
 
 
+@app.post("/api/request_anime")
+async def request_anime(payload: dict):
+    anime = str(payload.get("anime", "")).strip()[:100]
+    note = str(payload.get("note", "")).strip()[:300]
+    sender = str(payload.get("sender", "匿名")).strip()
+
+    if not anime:
+        return {"ok": False, "message": "アニメ名を入力してください。"}
+
+    if not GAS_WEBHOOK_URL:
+        print(f"[作品追加リクエスト(未連携)] 送信者:{sender} / 作品:{anime} / メモ:{note}")
+        return {"ok": True, "message": "リクエストを受け付けました！"}
+
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
+            await client.post(
+                GAS_WEBHOOK_URL,
+                json={"sender": sender, "anime": anime, "note": note},
+            )
+        return {"ok": True, "message": "運営のスプレッドシートにリクエストを送信しました！"}
+    except Exception as e:
+        print("GAS送信エラー:", e)
+        return {"ok": False, "message": "送信に失敗しました。時間をおいて再度お試しください。"}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
@@ -724,16 +765,17 @@ async def websocket_endpoint(ws: WebSocket):
                 continue
 
             if action == "SEND_CHAT":
-                text = str(data.get("text", "")).strip()[:200]
-                if text:
+                text = str(data.get("text", "")).strip()[:500]
+                image = str(data.get("image", ""))[:220000]
+                if text or image:
                     u = connected_users.get(client_id, {})
                     name = u.get("name") or data.get("playerName", "プレイヤー")
                     avatar = u.get("avatar", "")
                     if current_room:
-                        current_room.add_chat(client_id, name, avatar, text)
+                        current_room.add_chat(client_id, name, avatar, text, image=image, is_system=False)
                         await current_room.broadcast_chat_only()
                     else:
-                        add_global_chat(client_id, name, avatar, text)
+                        add_global_chat(client_id, name, avatar, text, image=image, is_system=False)
                         await broadcast_global_chat()
                 continue
 
@@ -742,13 +784,14 @@ async def websocket_endpoint(ws: WebSocket):
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
                 avatar = data.get("avatar", "")[:35000]
                 settings = data["settings"]
-                room_name = str(settings.get("roomName", "")).strip()[:24] or f"{name}の部屋"
-                room_desc = str(settings.get("roomDesc", "")).strip()[:60]
+                room_name = str(settings.get("roomName", "")).strip()[:40] or f"{name}の部屋"
+                room_desc = str(settings.get("roomDesc", "")).strip()[:100]
 
                 rid = gen_room_id()
                 room = GameRoom(rid, client_id, room_name, room_desc, settings)
                 room.connections[client_id] = ws
                 room.lobby_humans.append({"id": client_id, "name": name, "avatar": avatar})
+                room.add_chat("system", "システム", "", f"🟢 {name} さんがルームを作成・入室しました", is_system=True)
                 rooms[rid] = room
                 current_room = room
                 connected_users[client_id] = {
@@ -777,6 +820,9 @@ async def websocket_endpoint(ws: WebSocket):
                     room.lobby_humans.append({"id": client_id, "name": name, "avatar": avatar})
                     if room.phase != "LOBBY":
                         room.add_log(f"👀 {name} が途中参加（観戦モード／次戦から参戦）しました！")
+                        room.add_chat("system", "システム", "", f"🟢 {name} さんが入室しました（観戦・次戦から参加）", is_system=True)
+                    else:
+                        room.add_chat("system", "システム", "", f"🟢 {name} さんが入室しました", is_system=True)
                 else:
                     for h in room.lobby_humans:
                         if h["id"] == client_id:
@@ -796,6 +842,12 @@ async def websocket_endpoint(ws: WebSocket):
             elif action == "LEAVE_ROOM":
                 client_id = data.get("clientId", client_id)
                 if current_room:
+                    u_info = connected_users.get(client_id, {})
+                    leaver_name = u_info.get("name") or next(
+                        (h["name"] for h in current_room.lobby_humans if h["id"] == client_id),
+                        "プレイヤー",
+                    )
+
                     if client_id in current_room.connections:
                         del current_room.connections[client_id]
                     current_room.lobby_humans = [
@@ -815,8 +867,12 @@ async def websocket_endpoint(ws: WebSocket):
                                 p["rank"] = sum(1 for x in current_room.players if x["finished"])
                             current_room.add_log(f"🚪 {p['name']} がルームを退出しました。")
 
+                    current_room.add_chat("system", "システム", "", f"🚪 {leaver_name} さんが退室しました", is_system=True)
+
                     if current_room.host_id == client_id and current_room.lobby_humans:
                         current_room.host_id = current_room.lobby_humans[0]["id"]
+                        new_host_name = current_room.lobby_humans[0]["name"]
+                        current_room.add_chat("system", "システム", "", f"👑 {new_host_name} さんが新しいホストになりました", is_system=True)
 
                     if client_id in connected_users:
                         connected_users[client_id]["room_id"] = None
@@ -861,10 +917,14 @@ async def websocket_endpoint(ws: WebSocket):
                         p["id"] == client_id and not p.get("leftRoom") for p in room.players
                     )
                     if is_member:
+                        was_disconnected = client_id not in room.connections
                         room.connections[client_id] = ws
                         current_room = room
                         if client_id in connected_users:
                             connected_users[client_id]["room_id"] = rid
+                        if was_disconnected and name:
+                            room.add_chat("system", "システム", "", f"🔄 {name} さんが再接続しました", is_system=True)
+                            await room.broadcast_chat_only()
                         await ws.send_text(json.dumps(room.get_state_for_client(client_id), ensure_ascii=False))
                         await broadcast_online_users()
                         continue
@@ -956,6 +1016,11 @@ async def websocket_endpoint(ws: WebSocket):
     except WebSocketDisconnect:
         if current_room and current_room.connections.get(client_id) is ws:
             del current_room.connections[client_id]
+            u_info = connected_users.get(client_id, {})
+            disc_name = u_info.get("name", "")
+            if disc_name:
+                current_room.add_chat("system", "システム", "", f"📴 {disc_name} さんの接続が切れました", is_system=True)
+                await current_room.broadcast_chat_only()
         if client_id in connected_users and connected_users[client_id].get("ws") is ws:
             del connected_users[client_id]
             await broadcast_online_users()
