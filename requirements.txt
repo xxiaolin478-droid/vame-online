@@ -1,5 +1,5 @@
 fastapi
 uvicorn
 websockets
-pandas
 openpyxl
+httpx
