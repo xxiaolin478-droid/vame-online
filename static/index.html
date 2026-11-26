@@ -856,7 +856,7 @@
             </div>
           </div>
           <div class="form-row">
-            <label>プレイヤーネーム（文字数制限なし・自動保存）</label>
+            <label>プレイヤーネーム（自動保存）</label>
             <input type="text" id="playerNameInput" oninput="onProfileChange()" />
           </div>
         </div>
@@ -878,7 +878,7 @@
               📷
               <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
             </label>
-            <input type="text" id="homeChatInput" placeholder="アクセス中のメンバーに挨拶や @メンション・写真を送れます..."
+            <input type="text" id="homeChatInput" placeholder=""
               oninput="handleChatInput('homeChatInput')" onkeydown="handleChatKeydown(event, 'homeChatInput')" />
             <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
               onclick="sendChat('homeChatInput')">送信</button>
@@ -979,7 +979,7 @@
                 📷
                 <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
               </label>
-              <input type="text" id="lobbyChatInput" placeholder="ルーム内のメンバーとチャット・@メンション・写真共有..."
+              <input type="text" id="lobbyChatInput" placeholder=""
                 oninput="handleChatInput('lobbyChatInput')" onkeydown="handleChatKeydown(event, 'lobbyChatInput')" />
               <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
                 onclick="sendChat('lobbyChatInput')">送信</button>
@@ -1025,7 +1025,7 @@
 
       <!-- 場のカード -->
       <div class="card-box">
-        <h2>🧠 場のカード（重ねる対象）</h2>
+        <h2>🧠 場のカード</h2>
         <div class="cards-row" id="fieldCardsRow"></div>
       </div>
 
@@ -1036,7 +1036,7 @@
         <div id="animeSelectArea" class="hidden" style="margin-top:12px;"></div>
         <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;" id="controlButtons"></div>
         <p class="alert-msg" id="gameAlert"></p>
-        <p class="key-guide">⌨️ キーボード操作: [1]〜[9] 選択（手札・場はいつでも上書き可） / [0] スキップ / [a] 未登録作品として強制出し / [Esc] 選択解除</p>
+        <p class="key-guide">⌨️ キーボード操作: [1]〜[9] 選択/ [0] スキップ / [a] 未登録作品として強制出し / [Esc] 選択解除</p>
       </div>
 
       <!-- 観戦モード用：全プレイヤーの手札一覧 -->
@@ -1053,7 +1053,7 @@
         </div>
 
         <div class="card-box">
-          <h2>💬 ルームチャット（@でメンション）</h2>
+          <h2>💬 ルームチャット</h2>
           <div class="chat-messages" id="gameChatMessages" style="height:175px;"></div>
           <div class="chat-input-wrapper">
             <div id="gameChatMentionPopup" class="mention-popup hidden"></div>
@@ -1471,7 +1471,7 @@
       if (latestRoomsList.length === 0) {
         container.innerHTML = `
           <div style="text-align:center;padding:28px 12px;color:var(--muted);background:#f8fafc;border:1px dashed var(--border);border-radius:8px;">
-            現在公開されている部屋はありません。<br>左のフォームから新しいルームを作成してください！
+            現在公開されている部屋はありません。<br>新しいルームを作成してください！
           </div>`;
         return;
       }
@@ -1803,7 +1803,7 @@
         if (msg.type === "ANIME_OPTIONS") {
           if (msg.options.length === 0) {
             document.getElementById("gameAlert").textContent =
-              "❌ 共演アニメが見つかりませんでした。（別の手札・場を選び直すか、[a] キーで強制出しできます）";
+              "❌ 共演アニメが見つかりませんでした。（[a] キーで強制出しできます）";
             uiStep = "SELECT_FIELD";
             renderGame();
             return;
@@ -2183,14 +2183,14 @@
           stepTitle.textContent = "① 出す手札を選んでください（数字キー 1〜 / 0でスキップ）";
           ctrlBtns.innerHTML = `<button class="btn btn-outline" onclick="triggerSkip()">[0] スキップ（手札交換）</button>`;
         } else if (uiStep === "SELECT_FIELD") {
-          stepTitle.textContent = `② 『${selectedHandCard}』を重ねる場のカードを選んでください（別の手札クリックで変更可）`;
+          stepTitle.textContent = `② 『${selectedHandCard}』を重ねる場のカードを選んでください`;
           let btns = `<button class="btn btn-outline" onclick="resetSelection();renderGame();">[Esc] 手札選択に戻る</button>`;
           if (selectedFieldIdx !== null) {
             btns += `<button class="btn btn-force" onclick="forcePlayWildcard()">[a] 未登録作品として強制出し</button>`;
           }
           ctrlBtns.innerHTML = btns;
         } else if (uiStep === "SELECT_ANIME") {
-          stepTitle.textContent = "③ 共演アニメを選んでください（別の手札・場をクリックで変更可）";
+          stepTitle.textContent = "③ 共演アニメを選んでください";
           let html = "";
           currentAnimeOptions.forEach((opt, i) => {
             html += `<button class="anime-choice" onclick="confirmPlay(${i})">
