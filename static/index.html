@@ -220,6 +220,11 @@
       border-color: #fbbf24;
     }
 
+    .toast-banner.mention-alert {
+      background: rgba(30, 58, 138, 0.97);
+      border-color: #60a5fa;
+    }
+
     @keyframes slideInToast {
       from {
         transform: translateY(-20px);
@@ -411,7 +416,7 @@
       line-height: 1.2;
     }
 
-    /* チャットボックス（写真・システムログ対応） */
+    /* チャットボックス（写真・システムログ・メンション対応） */
     .chat-messages {
       height: 170px;
       overflow-y: auto;
@@ -446,6 +451,28 @@
       border-color: #93c5fd;
     }
 
+    .chat-row.mentioned .chat-bubble {
+      background: #fef9c3;
+      border-color: #facc15;
+    }
+
+    .mention-pill {
+      display: inline-block;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-weight: bold;
+      padding: 0 5px;
+      border-radius: 4px;
+      border: 1px solid #93c5fd;
+      margin: 0 1px;
+    }
+
+    .mention-pill.mention-me {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #1e40af;
+    }
+
     .chat-system-line {
       text-align: center;
       font-size: 0.76rem;
@@ -473,6 +500,10 @@
       border: 1px solid var(--border);
     }
 
+    .chat-input-wrapper {
+      position: relative;
+    }
+
     .chat-input-bar {
       display: flex;
       gap: 6px;
@@ -481,6 +512,41 @@
 
     .chat-input-bar input[type="text"] {
       flex: 1;
+    }
+
+    /* メンション候補ドロップダウン */
+    .mention-popup {
+      position: absolute;
+      bottom: calc(100% + 4px);
+      left: 38px;
+      right: 54px;
+      max-height: 180px;
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1px solid #93c5fd;
+      border-radius: 8px;
+      box-shadow: 0 8px 20px rgba(15, 23, 42, 0.16);
+      z-index: 1000;
+    }
+
+    .mention-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 7px 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .mention-item:last-child {
+      border-bottom: none;
+    }
+
+    .mention-item:hover,
+    .mention-item.active {
+      background: #eff6ff;
     }
 
     .photo-btn-label {
@@ -801,19 +867,23 @@
         </div>
       </div>
 
-      <!-- ホーム画面チャット（全体チャット・写真送信対応） -->
+      <!-- ホーム画面チャット（全体チャット・写真＆メンション送信対応） -->
       <div class="card-box" id="homeChatCard">
         <h2>💬 ロビー全体チャット</h2>
         <div class="chat-messages" id="homeChatMessages"></div>
-        <div class="chat-input-bar">
-          <label class="photo-btn-label" title="写真を送信">
-            📷
-            <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
-          </label>
-          <input type="text" id="homeChatInput" placeholder="アクセス中のメンバーに挨拶や写真を送れます..."
-            onkeydown="if(event.key==='Enter') sendChat('homeChatInput')" />
-          <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
-            onclick="sendChat('homeChatInput')">送信</button>
+        <div class="chat-input-wrapper">
+          <div id="homeChatMentionPopup" class="mention-popup hidden"></div>
+          <div class="chat-input-bar">
+            <label class="photo-btn-label" title="写真を送信">
+              📷
+              <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
+            </label>
+            <input type="text" id="homeChatInput" placeholder="アクセス中のメンバーに挨拶や @メンション・写真を送れます..."
+              oninput="handleChatInput('homeChatInput')"
+              onkeydown="handleChatKeydown(event, 'homeChatInput')" />
+            <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
+              onclick="sendChat('homeChatInput')">送信</button>
+          </div>
         </div>
       </div>
 
@@ -901,17 +971,21 @@
         <p id="waitingHostText" style="text-align:center;color:var(--muted);font-weight:bold;">ホストの開始を待っています...</p>
 
         <div style="margin-top:14px; border-top:1px solid var(--border); padding-top:12px;">
-          <label>💬 ルームチャット</label>
+          <label>💬 ルームチャット（@でメンション）</label>
           <div class="chat-messages" id="lobbyChatMessages"></div>
-          <div class="chat-input-bar">
-            <label class="photo-btn-label" title="写真を送信">
-              📷
-              <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
-            </label>
-            <input type="text" id="lobbyChatInput" placeholder="ルーム内のメンバーとチャット・写真共有..."
-              onkeydown="if(event.key==='Enter') sendChat('lobbyChatInput')" />
-            <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
-              onclick="sendChat('lobbyChatInput')">送信</button>
+          <div class="chat-input-wrapper">
+            <div id="lobbyChatMentionPopup" class="mention-popup hidden"></div>
+            <div class="chat-input-bar">
+              <label class="photo-btn-label" title="写真を送信">
+                📷
+                <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
+              </label>
+              <input type="text" id="lobbyChatInput" placeholder="ルーム内のメンバーとチャット・@メンション・写真共有..."
+                oninput="handleChatInput('lobbyChatInput')"
+                onkeydown="handleChatKeydown(event, 'lobbyChatInput')" />
+              <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
+                onclick="sendChat('lobbyChatInput')">送信</button>
+            </div>
           </div>
         </div>
       </div>
@@ -981,17 +1055,21 @@
         </div>
 
         <div class="card-box">
-          <h2>💬 ルームチャット</h2>
+          <h2>💬 ルームチャット（@でメンション）</h2>
           <div class="chat-messages" id="gameChatMessages" style="height:175px;"></div>
-          <div class="chat-input-bar">
-            <label class="photo-btn-label" title="写真を送信">
-              📷
-              <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
-            </label>
-            <input type="text" id="gameChatInput" placeholder="試合中の会話・写真共有・感想戦に..."
-              onkeydown="if(event.key==='Enter') sendChat('gameChatInput')" />
-            <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
-              onclick="sendChat('gameChatInput')">送信</button>
+          <div class="chat-input-wrapper">
+            <div id="gameChatMentionPopup" class="mention-popup hidden"></div>
+            <div class="chat-input-bar">
+              <label class="photo-btn-label" title="写真を送信">
+                📷
+                <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
+              </label>
+              <input type="text" id="gameChatInput" placeholder="試合中の会話・@メンション・写真共有に..."
+                oninput="handleChatInput('gameChatInput')"
+                onkeydown="handleChatKeydown(event, 'gameChatInput')" />
+              <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
+                onclick="sendChat('gameChatInput')">送信</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1041,6 +1119,7 @@
     let allActorsMaster = [];
     let actorAnimesMaster = {};
     let selectedActorSet = new Set();
+    let onlineUsersList = [];
     let globalChatList = [];
     let hasLoadedInitialGlobalChat = false;
 
@@ -1049,6 +1128,14 @@
     let selectedHandCard = null;
     let selectedFieldIdx = null;
     let currentAnimeOptions = [];
+
+    // メンション補完用の状態管理
+    const mentionState = {
+      activeInputId: null,
+      candidates: [],
+      selectedIndex: 0,
+      atStartPos: -1
+    };
 
     function getAvatarSrc(avatarStr, isAI = false) {
       if (isAI) {
@@ -1067,11 +1154,61 @@
         .replace(/"/g, "&quot;");
     }
 
-    // 汎用トースト通知（ログイン・チャット・自分のターン共通）
-    function showToast({ title, titleColor = "#93c5fd", body, avatar = "", isTurnAlert = false }) {
+    function escapeRegExp(str) {
+      return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function getCurrentPlayerName() {
+      const val = nameInputEl.value.trim();
+      return val || savedName;
+    }
+
+    // 自分がメンションされているか判定
+    function isMentionedToMe(text) {
+      if (!text) return false;
+      const myName = getCurrentPlayerName();
+      if (!myName) return false;
+      return text.includes("@" + myName);
+    }
+
+    // チャット本文内の @ユーザー名 をハイライトしてHTML化
+    function formatChatTextWithMentions(text) {
+      if (!text) return "";
+      const myName = getCurrentPlayerName();
+      const nameSet = new Set();
+      if (myName) nameSet.add(myName);
+      onlineUsersList.forEach(u => {
+        if (u.name) nameSet.add(u.name);
+      });
+      if (state && state.lobbyHumans) {
+        state.lobbyHumans.forEach(h => {
+          if (h.name) nameSet.add(h.name);
+        });
+      }
+
+      // 長い名前から優先的にマッチさせる
+      const names = Array.from(nameSet).sort((a, b) => b.length - a.length);
+      if (names.length === 0) {
+        return escapeHtml(text);
+      }
+
+      const pattern = new RegExp(`(@(?:${names.map(escapeRegExp).join("|")}))`, "g");
+      const parts = text.split(pattern);
+      return parts.map(part => {
+        if (part.startsWith("@") && nameSet.has(part.slice(1))) {
+          const targetName = part.slice(1);
+          const isMe = targetName === myName;
+          return `<span class="mention-pill ${isMe ? "mention-me" : ""}">${escapeHtml(part)}</span>`;
+        }
+        return escapeHtml(part);
+      }).join("");
+    }
+
+    // 汎用トースト通知（ログイン・チャット・メンション・自分のターン共通）
+    function showToast({ title, titleColor = "#93c5fd", body, avatar = "", alertClass = "" }) {
       const container = document.getElementById("toastContainer");
       const toast = document.createElement("div");
-      toast.className = "toast-banner" + (isTurnAlert ? " turn-alert" : "");
+      toast.className = "toast-banner" + (alertClass ? " " + alertClass : "");
       const av = getAvatarSrc(avatar, false);
       toast.innerHTML = `
         <img class="avatar-sm" src="${av}" style="width:34px;height:34px;" />
@@ -1097,13 +1234,24 @@
 
     function showChatToast(msgObj, channelLabel) {
       if (!msgObj || msgObj.isSystem || msgObj.clientId === clientId) return;
+      const mentioned = isMentionedToMe(msgObj.text);
       const preview = msgObj.text ? escapeHtml(msgObj.text) : "📷 写真を送信しました";
-      showToast({
-        title: `💬 ${channelLabel}（${escapeHtml(msgObj.name)}）`,
-        titleColor: "#86efac",
-        body: preview,
-        avatar: msgObj.avatar
-      });
+      if (mentioned) {
+        showToast({
+          title: `📣 メンション通知（${escapeHtml(msgObj.name)}）`,
+          titleColor: "#93c5fd",
+          body: preview,
+          avatar: msgObj.avatar,
+          alertClass: "mention-alert"
+        });
+      } else {
+        showToast({
+          title: `💬 ${channelLabel}（${escapeHtml(msgObj.name)}）`,
+          titleColor: "#86efac",
+          body: preview,
+          avatar: msgObj.avatar
+        });
+      }
     }
 
     function showMyTurnToast() {
@@ -1112,13 +1260,8 @@
         titleColor: "#fde047",
         body: "手札からカードを出すかスキップしてください",
         avatar: savedAvatar,
-        isTurnAlert: true
+        alertClass: "turn-alert"
       });
-    }
-
-    function getCurrentPlayerName() {
-      const val = nameInputEl.value.trim();
-      return val || savedName;
     }
 
     function onAvatarSelected(event) {
@@ -1170,6 +1313,146 @@
           playerName: getCurrentPlayerName(),
           avatar: savedAvatar
         }));
+      }
+    }
+
+    // --------- メンション候補表示・選択ロジック ---------
+    function getPopupIdForInput(inputId) {
+      if (inputId === "homeChatInput") return "homeChatMentionPopup";
+      if (inputId === "lobbyChatInput") return "lobbyChatMentionPopup";
+      if (inputId === "gameChatInput") return "gameChatMentionPopup";
+      return null;
+    }
+
+    function getMentionCandidates(inputId, query) {
+      const q = query.toLowerCase();
+      const map = new Map();
+
+      // ルーム内チャットならルームメンバーを優先表示
+      if (inputId !== "homeChatInput" && state && Array.isArray(state.lobbyHumans)) {
+        state.lobbyHumans.forEach(h => {
+          if (h.id !== clientId && h.name) {
+            map.set(h.id, { id: h.id, name: h.name, avatar: h.avatar || "", status: "ルーム内" });
+          }
+        });
+      }
+
+      onlineUsersList.forEach(u => {
+        if (u.id !== clientId && u.name && !map.has(u.id)) {
+          map.set(u.id, { id: u.id, name: u.name, avatar: u.avatar || "", status: u.status || "" });
+        }
+      });
+
+      return Array.from(map.values()).filter(u => !q || u.name.toLowerCase().includes(q));
+    }
+
+    function closeMentionPopup() {
+      ["homeChatMentionPopup", "lobbyChatMentionPopup", "gameChatMentionPopup"].forEach(pid => {
+        const el = document.getElementById(pid);
+        if (el) el.classList.add("hidden");
+      });
+      mentionState.activeInputId = null;
+      mentionState.candidates = [];
+      mentionState.selectedIndex = 0;
+      mentionState.atStartPos = -1;
+    }
+
+    function renderMentionPopup(inputId) {
+      const popupId = getPopupIdForInput(inputId);
+      const popupEl = popupId ? document.getElementById(popupId) : null;
+      if (!popupEl) return;
+
+      if (mentionState.candidates.length === 0) {
+        popupEl.classList.add("hidden");
+        return;
+      }
+
+      let html = "";
+      mentionState.candidates.forEach((c, idx) => {
+        const activeCls = idx === mentionState.selectedIndex ? "active" : "";
+        const av = getAvatarSrc(c.avatar, false);
+        html += `
+          <div class="mention-item ${activeCls}" onmousedown="event.preventDefault(); applyMentionSelection(${idx})">
+            <span class="user-inline">
+              <img class="avatar-sm" src="${av}" />
+              <strong>@${escapeHtml(c.name)}</strong>
+            </span>
+            <span style="font-size:0.74rem;color:var(--muted);">${escapeHtml(c.status)}</span>
+          </div>
+        `;
+      });
+      popupEl.innerHTML = html;
+      popupEl.classList.remove("hidden");
+    }
+
+    function handleChatInput(inputId) {
+      const inp = document.getElementById(inputId);
+      if (!inp) return;
+      const cursorPos = inp.selectionStart ?? inp.value.length;
+      const textBeforeCursor = inp.value.slice(0, cursorPos);
+      const atIdx = textBeforeCursor.lastIndexOf("@");
+
+      if (atIdx !== -1 && (atIdx === 0 || /\s/.test(textBeforeCursor[atIdx - 1]))) {
+        const query = textBeforeCursor.slice(atIdx + 1);
+        if (!/\s/.test(query)) {
+          const candidates = getMentionCandidates(inputId, query);
+          mentionState.activeInputId = inputId;
+          mentionState.candidates = candidates;
+          mentionState.selectedIndex = 0;
+          mentionState.atStartPos = atIdx;
+          renderMentionPopup(inputId);
+          return;
+        }
+      }
+      closeMentionPopup();
+    }
+
+    function applyMentionSelection(idx) {
+      const inputId = mentionState.activeInputId;
+      const candidate = mentionState.candidates[idx];
+      if (!inputId || !candidate) {
+        closeMentionPopup();
+        return;
+      }
+      const inp = document.getElementById(inputId);
+      const cursorPos = inp.selectionStart ?? inp.value.length;
+      const before = inp.value.slice(0, mentionState.atStartPos);
+      const after = inp.value.slice(cursorPos);
+      const inserted = `@${candidate.name} `;
+      inp.value = before + inserted + after;
+      const newCursor = before.length + inserted.length;
+      inp.focus();
+      inp.setSelectionRange(newCursor, newCursor);
+      closeMentionPopup();
+    }
+
+    function handleChatKeydown(event, inputId) {
+      if (mentionState.activeInputId === inputId && mentionState.candidates.length > 0) {
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          mentionState.selectedIndex = (mentionState.selectedIndex + 1) % mentionState.candidates.length;
+          renderMentionPopup(inputId);
+          return;
+        }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          mentionState.selectedIndex = (mentionState.selectedIndex - 1 + mentionState.candidates.length) % mentionState.candidates.length;
+          renderMentionPopup(inputId);
+          return;
+        }
+        if (event.key === "Enter" || event.key === "Tab") {
+          event.preventDefault();
+          applyMentionSelection(mentionState.selectedIndex);
+          return;
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          closeMentionPopup();
+          return;
+        }
+      }
+      if (event.key === "Enter") {
+        sendChat(inputId);
       }
     }
 
@@ -1302,6 +1585,7 @@
 
     // --------- チャット送信（テキスト＆写真）・描画 ---------
     function sendChat(inputId) {
+      closeMentionPopup();
       const inp = document.getElementById(inputId);
       const text = inp.value.trim();
       if (!text) return;
@@ -1372,13 +1656,14 @@
           return;
         }
         const isMe = m.clientId === clientId;
+        const isMentioned = !isMe && isMentionedToMe(m.text);
         const av = getAvatarSrc(m.avatar, false);
-        const textHtml = m.text ? `<div>${escapeHtml(m.text)}</div>` : "";
+        const textHtml = m.text ? `<div>${formatChatTextWithMentions(m.text)}</div>` : "";
         const imgHtml = m.image
           ? `<img class="chat-img" src="${m.image}" alt="送信画像" onclick="openImageInNewTab(this.src)" />`
           : "";
         html += `
-          <div class="chat-row ${isMe ? "me" : ""}">
+          <div class="chat-row ${isMe ? "me" : ""} ${isMentioned ? "mentioned" : ""}">
             <img class="avatar-sm" src="${av}" style="margin-top:2px;" />
             <div class="chat-bubble">
               <div class="chat-meta">${escapeHtml(m.name)} ・ ${escapeHtml(m.time || "")}</div>
@@ -1395,49 +1680,6 @@
     function renderRoomChatBoxes(messages) {
       renderSingleChatBox("lobbyChatMessages", messages);
       renderSingleChatBox("gameChatMessages", messages);
-    }
-
-    // --------- 作品追加リクエスト送信 ---------
-    async function submitAnimeRequest() {
-      const animeInp = document.getElementById("reqAnimeInput");
-      const noteInp = document.getElementById("reqNoteInput");
-      const statusEl = document.getElementById("reqStatusMsg");
-      const anime = animeInp.value.trim();
-      const note = noteInp.value.trim();
-
-      if (!anime) {
-        statusEl.style.color = "var(--danger)";
-        statusEl.textContent = "※ アニメタイトルを入力してください。";
-        return;
-      }
-
-      statusEl.style.color = "var(--muted)";
-      statusEl.textContent = "送信中...";
-
-      try {
-        const res = await fetch("/api/request_anime", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sender: getCurrentPlayerName(),
-            anime,
-            note
-          })
-        });
-        const data = await res.json();
-        if (data.ok) {
-          statusEl.style.color = "var(--success)";
-          statusEl.textContent = "✅ " + data.message;
-          animeInp.value = "";
-          noteInp.value = "";
-        } else {
-          statusEl.style.color = "var(--danger)";
-          statusEl.textContent = "❌ " + data.message;
-        }
-      } catch (e) {
-        statusEl.style.color = "var(--danger)";
-        statusEl.textContent = "❌ 通信エラーが発生しました。";
-      }
     }
 
     // --------- WebSocket接続 ---------
@@ -1502,7 +1744,8 @@
           return;
         }
         if (msg.type === "ONLINE_USERS") {
-          renderOnlineUsers(msg.users);
+          onlineUsersList = msg.users || [];
+          renderOnlineUsers(onlineUsersList);
           return;
         }
         if (msg.type === "ROOM_LIST") {
@@ -1535,10 +1778,10 @@
           sessionStorage.removeItem("va_active_room");
           state = null;
           resetSelection();
+          closeMentionPopup();
           document.getElementById("gameView").classList.add("hidden");
           document.getElementById("homeView").classList.remove("hidden");
           document.getElementById("homeChatCard").classList.remove("hidden");
-          document.getElementById("requestAnimeCard").classList.remove("hidden");
           document.getElementById("setupPanels").classList.remove("hidden");
           document.getElementById("lobbyPanel").classList.add("hidden");
           renderSingleChatBox("homeChatMessages", globalChatList);
@@ -1741,7 +1984,6 @@
         document.getElementById("homeView").classList.remove("hidden");
         document.getElementById("gameView").classList.add("hidden");
         document.getElementById("homeChatCard").classList.add("hidden");
-        document.getElementById("requestAnimeCard").classList.add("hidden");
         document.getElementById("setupPanels").classList.add("hidden");
         document.getElementById("lobbyPanel").classList.remove("hidden");
         document.getElementById("lobbyRoomName").textContent = `🏠 ${state.roomName}`;
