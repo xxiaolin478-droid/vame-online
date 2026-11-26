@@ -889,7 +889,7 @@
       <div class="grid-2" id="setupPanels">
         <!-- ルーム作成 -->
         <div class="card-box">
-          <h2>ルームを作成する（1人1部屋まで）</h2>
+          <h2>ルームを作成する</h2>
           <div class="form-row">
             <label>ルーム名</label>
             <input type="text" id="roomNameInput" placeholder="例: 誰でも歓迎！わいわい対戦部屋" />
@@ -1455,7 +1455,7 @@
       const myHostedRoom = latestRoomsList.find(r => r.hostId === clientId);
       if (myHostedRoom) {
         btn.disabled = true;
-        btn.textContent = `すでにルームを作成済みです（1人1部屋まで）`;
+        btn.textContent = `すでにルームを作成済みです`;
       } else {
         btn.disabled = false;
         btn.textContent = "ルームを作成する";
