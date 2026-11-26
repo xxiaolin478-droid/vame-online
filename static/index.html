@@ -884,27 +884,6 @@
         </div>
       </div>
 
-      <!-- 運営への作品追加リクエストフォーム -->
-      <div class="card-box" id="requestAnimeCard">
-        <h2>📮 運営へ作品・声優データの追加リクエスト</h2>
-        <p style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;">
-          表に未登録のアニメや共演ペアがあれば、ここから運営にリクエストを送れます。
-        </p>
-        <div class="grid-2">
-          <div class="form-row">
-            <label>追加してほしいアニメタイトル（必須）</label>
-            <input type="text" id="reqAnimeInput" placeholder="例: 〇〇の△△" maxlength="100" />
-          </div>
-          <div class="form-row">
-            <label>出演声優・補足メモ（任意）</label>
-            <input type="text" id="reqNoteInput" placeholder="例: 〇〇さんと△△さんが共演しています" maxlength="300" />
-          </div>
-        </div>
-        <button type="button" class="btn btn-outline" style="width:100%;" onclick="submitAnimeRequest()">📩
-          運営にリクエストを送る</button>
-        <p id="reqStatusMsg" style="font-size:0.85rem;font-weight:bold;margin-top:6px;"></p>
-      </div>
-
       <!-- 待機ロビー -->
       <div class="card-box hidden" id="lobbyPanel">
         <h2>対戦ロビー</h2>
