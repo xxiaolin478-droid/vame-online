@@ -197,6 +197,7 @@ def get_room_list_data() -> List[dict]:
             "roomId": rid,
             "roomName": room.room_name,
             "roomDesc": room.room_desc,
+            "hostId": room.host_id,
             "hostName": host_name,
             "phase": room.phase,
             "humanCount": len(room.lobby_humans),
@@ -503,13 +504,11 @@ class GameRoom:
                 pass
 
     def finish_game_and_assign_ranks(self, reason_log: str):
-        # 1. 途中退出していない残存プレイヤー（人間・AI）に順位をつける
         active = [x for x in self.players if not x["finished"] and not x.get("leftRoom")]
         for rem in active:
             rem["finished"] = True
             rem["rank"] = sum(1 for x in self.players if x["finished"] and not x.get("leftRoom"))
 
-        # 2. 途中退出したプレイヤーはAIより下の最下位（退出者同士は同順位）にする
         leavers = [x for x in self.players if x.get("leftRoom")]
         if leavers:
             non_leaver_count = sum(1 for x in self.players if not x.get("leftRoom"))
@@ -657,6 +656,66 @@ async def run_ai_turns_if_needed(room: GameRoom):
         await room.broadcast()
 
 
+async def remove_user_from_room(client_id: str, room: GameRoom):
+    u_info = connected_users.get(client_id, {})
+    leaver_name = u_info.get("name") or next(
+        (h["name"] for h in room.lobby_humans if h["id"] == client_id),
+        "プレイヤー",
+    )
+
+    if client_id in room.connections:
+        del room.connections[client_id]
+    room.lobby_humans = [
+        h for h in room.lobby_humans if h["id"] != client_id
+    ]
+
+    was_current_turn = (
+        room.phase == "PLAYING"
+        and len(room.players) > 0
+        and room.players[room.current_pid]["id"] == client_id
+    )
+
+    for p in room.players:
+        if p["id"] == client_id and not p.get("leftRoom"):
+            p["leftRoom"] = True
+            p["finished"] = True
+            p["rank"] = len(room.players)
+            room.add_log(f"🚪 {p['name']} がルームを退出しました（最下位扱い）。")
+
+    leavers = [x for x in room.players if x.get("leftRoom")]
+    if leavers:
+        non_leaver_count = sum(1 for x in room.players if not x.get("leftRoom"))
+        for lv in leavers:
+            lv["rank"] = non_leaver_count + 1
+
+    room.add_chat("system", "システム", "", f"🚪 {leaver_name} さんが退室しました", is_system=True)
+
+    if room.host_id == client_id and room.lobby_humans:
+        room.host_id = room.lobby_humans[0]["id"]
+        new_host_name = room.lobby_humans[0]["name"]
+        room.add_chat("system", "システム", "", f"👑 {new_host_name} さんが新しいホストになりました", is_system=True)
+
+    if client_id in connected_users and connected_users[client_id].get("room_id") == room.room_id:
+        connected_users[client_id]["room_id"] = None
+
+    if not room.lobby_humans and not room.connections:
+        rooms.pop(room.room_id, None)
+        await broadcast_online_users()
+        await broadcast_room_list()
+    else:
+        if room.phase == "PLAYING":
+            active = [x for x in room.players if not x["finished"]]
+            humans_active = [x for x in active if not x["isAI"]]
+            n = len(room.players)
+            if (n == 1 and len(active) == 0) or (n > 1 and (len(active) <= 1 or len(humans_active) == 0)):
+                room.finish_game_and_assign_ranks("=== プレイヤー退出によりゲーム終了 ===")
+            elif was_current_turn:
+                room.check_victory_and_advance()
+                asyncio.create_task(run_ai_turns_if_needed(room))
+
+        await room.broadcast()
+
+
 @app.get("/")
 async def index():
     return FileResponse(STATIC_DIR / "index.html")
@@ -695,6 +754,9 @@ async def websocket_endpoint(ws: WebSocket):
 
                 existing = connected_users.get(client_id)
                 room_id = existing.get("room_id") if existing else None
+                if room_id and room_id not in rooms:
+                    room_id = None
+
                 connected_users[client_id] = {
                     "id": client_id,
                     "name": name,
@@ -765,6 +827,25 @@ async def websocket_endpoint(ws: WebSocket):
                 client_id = data["clientId"]
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
                 avatar = data.get("avatar", "")[:35000]
+
+                # 1人1部屋まで制限（すでに部屋を立てている／入室している場合は拒否）
+                existing_hosted = next((r for r in rooms.values() if r.host_id == client_id), None)
+                if existing_hosted:
+                    await ws.send_text(
+                        json.dumps(
+                            {
+                                "type": "ERROR",
+                                "message": f"同時に作成できる部屋は1つまでです（すでに「{existing_hosted.room_name}」を作成中です）。",
+                            },
+                            ensure_ascii=False,
+                        )
+                    )
+                    continue
+
+                if current_room and current_room.room_id in rooms:
+                    await remove_user_from_room(client_id, current_room)
+                    current_room = None
+
                 settings = data["settings"]
                 room_name = str(settings.get("roomName", "")).strip()[:40] or f"{name}の部屋"
                 room_desc = str(settings.get("roomDesc", "")).strip()[:100]
@@ -796,6 +877,11 @@ async def websocket_endpoint(ws: WebSocket):
                     await ws.send_text(json.dumps({"type": "ROOM_LIST", "rooms": get_room_list_data()}, ensure_ascii=False))
                     continue
 
+                # 別の部屋にいた場合は自動退出してから入室
+                if current_room and current_room.room_id != rid and current_room.room_id in rooms:
+                    await remove_user_from_room(client_id, current_room)
+                    current_room = None
+
                 room.connections[client_id] = ws
                 already_in_lobby = any(h["id"] == client_id for h in room.lobby_humans)
                 if not already_in_lobby:
@@ -824,66 +910,12 @@ async def websocket_endpoint(ws: WebSocket):
             elif action == "LEAVE_ROOM":
                 client_id = data.get("clientId", client_id)
                 if current_room:
-                    u_info = connected_users.get(client_id, {})
-                    leaver_name = u_info.get("name") or next(
-                        (h["name"] for h in current_room.lobby_humans if h["id"] == client_id),
-                        "プレイヤー",
-                    )
-
-                    if client_id in current_room.connections:
-                        del current_room.connections[client_id]
-                    current_room.lobby_humans = [
-                        h for h in current_room.lobby_humans if h["id"] != client_id
-                    ]
-
-                    was_current_turn = (
-                        current_room.phase == "PLAYING"
-                        and current_room.players[current_room.current_pid]["id"] == client_id
-                    )
-
-                    for p in current_room.players:
-                        if p["id"] == client_id and not p.get("leftRoom"):
-                            p["leftRoom"] = True
-                            p["finished"] = True
-                            p["rank"] = len(current_room.players)
-                            current_room.add_log(f"🚪 {p['name']} がルームを退出しました（最下位扱い）。")
-
-                    leavers = [x for x in current_room.players if x.get("leftRoom")]
-                    if leavers:
-                        non_leaver_count = sum(1 for x in current_room.players if not x.get("leftRoom"))
-                        for lv in leavers:
-                            lv["rank"] = non_leaver_count + 1
-
-                    current_room.add_chat("system", "システム", "", f"🚪 {leaver_name} さんが退室しました", is_system=True)
-
-                    if current_room.host_id == client_id and current_room.lobby_humans:
-                        current_room.host_id = current_room.lobby_humans[0]["id"]
-                        new_host_name = current_room.lobby_humans[0]["name"]
-                        current_room.add_chat("system", "システム", "", f"👑 {new_host_name} さんが新しいホストになりました", is_system=True)
-
-                    if client_id in connected_users:
-                        connected_users[client_id]["room_id"] = None
-
-                    room_to_notify = current_room
+                    room_to_leave = current_room
                     current_room = None
                     await ws.send_text('{"type":"LEFT_ROOM_OK"}')
-
-                    if not room_to_notify.lobby_humans and not room_to_notify.connections:
-                        rooms.pop(room_to_notify.room_id, None)
-                        await broadcast_online_users()
-                        await broadcast_room_list()
-                    else:
-                        if room_to_notify.phase == "PLAYING":
-                            active = [x for x in room_to_notify.players if not x["finished"]]
-                            humans_active = [x for x in active if not x["isAI"]]
-                            n = len(room_to_notify.players)
-                            if (n == 1 and len(active) == 0) or (n > 1 and (len(active) <= 1 or len(humans_active) == 0)):
-                                room_to_notify.finish_game_and_assign_ranks("=== プレイヤー退出によりゲーム終了 ===")
-                            elif was_current_turn:
-                                room_to_notify.check_victory_and_advance()
-                                asyncio.create_task(run_ai_turns_if_needed(room_to_notify))
-
-                        await room_to_notify.broadcast()
+                    await remove_user_from_room(client_id, room_to_leave)
+                else:
+                    await ws.send_text('{"type":"LEFT_ROOM_OK"}')
                 continue
 
             elif action == "RECONNECT":
