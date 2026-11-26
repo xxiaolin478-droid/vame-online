@@ -110,12 +110,18 @@
 
     input[type="text"],
     input[type="number"],
-    select {
+    select,
+    textarea {
       width: 100%;
       padding: 8px 10px;
       border: 1px solid var(--border);
       border-radius: 6px;
       font-size: 0.95rem;
+    }
+
+    textarea {
+      resize: vertical;
+      font-family: inherit;
     }
 
     .btn {
@@ -348,12 +354,68 @@
       color: #334155;
     }
 
-    /* 声優選択リスト */
+    /* 一時カード・コピペ・声優選択リスト */
     .actor-selector-box {
       border: 1px solid var(--border);
       border-radius: 8px;
       padding: 10px;
       background: #f8fafc;
+    }
+
+    .sub-panel {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 8px;
+    }
+
+    .sub-panel-title {
+      font-size: 0.78rem;
+      font-weight: bold;
+      color: #475569;
+      margin-bottom: 5px;
+    }
+
+    .inline-add-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .inline-add-row input {
+      flex: 1;
+      padding: 6px 8px;
+      font-size: 0.85rem;
+    }
+
+    .custom-chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 6px;
+    }
+
+    .custom-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+      font-size: 0.78rem;
+      font-weight: bold;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .custom-chip button {
+      background: none;
+      border: none;
+      color: #b45309;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.85rem;
+      line-height: 1;
     }
 
     .actor-bulk-btns {
@@ -416,7 +478,63 @@
       line-height: 1.2;
     }
 
-    /* チャットボックス（写真・システムログ・メンション対応） */
+    .temp-badge-mini {
+      display: inline-block;
+      background: #f59e0b;
+      color: #fff;
+      font-size: 0.65rem;
+      padding: 0 4px;
+      border-radius: 3px;
+      margin-left: 3px;
+    }
+
+    /* 宣言モード入力エリア */
+    .declare-box {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .declare-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .declare-input-row input {
+      flex: 1;
+    }
+
+    .declare-suggest-list {
+      margin-top: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .declare-suggest-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      cursor: pointer;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    .declare-suggest-item:hover {
+      background: #eff6ff;
+      border-color: var(--primary);
+    }
+
+    /* チャットボックス */
     .chat-messages {
       height: 170px;
       overflow-y: auto;
@@ -867,7 +985,7 @@
         </div>
       </div>
 
-      <!-- ホーム画面チャット（全体チャット・写真＆メンション送信対応） -->
+      <!-- ホーム画面チャット -->
       <div class="card-box" id="homeChatCard">
         <h2>💬 ロビー全体チャット</h2>
         <div class="chat-messages" id="homeChatMessages"></div>
@@ -878,7 +996,7 @@
               📷
               <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
             </label>
-            <input type="text" id="homeChatInput" placeholder=""
+            <input type="text" id="homeChatInput" placeholder="全体チャット（@でメンション）"
               oninput="handleChatInput('homeChatInput')" onkeydown="handleChatKeydown(event, 'homeChatInput')" />
             <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
               onclick="sendChat('homeChatInput')">送信</button>
@@ -898,12 +1016,21 @@
             <label>軽い説明・募集メモ（任意）</label>
             <input type="text" id="roomDescInput" placeholder="例: 初心者OK！途中参加も歓迎です" />
           </div>
-          <div class="form-row">
-            <label>ゲームモード</label>
-            <select id="endlessSelect" onchange="toggleExtraRow()">
-              <option value="0">通常モード（手札を0枚にしたら勝利）</option>
-              <option value="1">エンドレスモード（上限到達で脱落／山札切れで終了）</option>
-            </select>
+          <div class="grid-2">
+            <div class="form-row">
+              <label>勝敗ルール</label>
+              <select id="endlessSelect" onchange="toggleExtraRow()">
+                <option value="0">通常（手札0枚で勝利）</option>
+                <option value="1">エンドレス（上限到達で脱落）</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>アニメ判定方式</label>
+              <select id="declareModeSelect">
+                <option value="0">選択モード（DB共演判定）</option>
+                <option value="1">宣言モード（自由重ね＋作品宣言）</option>
+              </select>
+            </div>
           </div>
           <div class="grid-2">
             <div class="form-row">
@@ -921,11 +1048,34 @@
           </div>
           <div id="aiConfigContainer"></div>
 
-          <!-- 使用する声優の個別選択＆声優名・アニメ名検索 -->
+          <!-- 使用するカード（声優＋一時カード）選択＆コピペ一括入力 -->
           <div class="form-row">
-            <label>使用する声優を選択（選択中: <span id="selectedActorCountSpan" style="color:var(--primary);">0</span> / <span
-                id="maxActorSpan">0</span>名）</label>
+            <label>使用するカードを選択（選択中: <span id="selectedActorCountSpan" style="color:var(--primary);">0</span> / <span
+                id="maxActorSpan">0</span>枚）</label>
             <div class="actor-selector-box">
+              <!-- 一時カード追加 -->
+              <div class="sub-panel">
+                <div class="sub-panel-title">✨ 一時カードを作成（部屋解散時に自動削除 / 何枚でも可）</div>
+                <div class="inline-add-row">
+                  <input type="text" id="customActorInput" placeholder="追加したい名前を入力..."
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomActorFromInput();}" />
+                  <button type="button" class="btn btn-outline btn-xs" onclick="addCustomActorFromInput()">追加</button>
+                </div>
+                <div class="custom-chip-list" id="customActorChipList"></div>
+              </div>
+
+              <!-- 改行コピペ一括入力 -->
+              <div class="sub-panel">
+                <div class="sub-panel-title">📋 コピペ一括選択・作成（1行に1名／DBにない名前は一時カードとして自動作成）</div>
+                <textarea id="pasteActorsTextarea" rows="3" placeholder="例:&#10;声優A&#10;声優B&#10;声優C"></textarea>
+                <div style="display:flex; gap:6px; margin-top:5px;">
+                  <button type="button" class="btn btn-outline btn-xs"
+                    onclick="applyPastedActors(false)">現在の選択に追加して反映</button>
+                  <button type="button" class="btn btn-outline btn-xs"
+                    onclick="applyPastedActors(true)">リストの人のみに置き換え</button>
+                </div>
+              </div>
+
               <input type="text" id="actorSearchInput" placeholder="🔍 声優名 または アニメ名で検索..."
                 oninput="renderActorChecklist()" />
               <div class="actor-bulk-btns">
@@ -953,15 +1103,18 @@
         </div>
       </div>
 
-      <!-- 待機ロビー（ホスト・ゲスト共通） -->
+      <!-- 待機ロビー -->
       <div class="card-box hidden" id="lobbyPanel">
         <h2>対戦ロビー</h2>
         <div class="room-header-bar">
           <div>
             <div style="font-size:1.15rem;font-weight:bold;color:var(--primary);" id="lobbyRoomName"></div>
             <div style="font-size:0.86rem;color:#334155;margin-top:3px;" id="lobbyRoomDesc"></div>
-            <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">使用声優: <strong
-                id="lobbyActorCount">-</strong>名</div>
+            <div style="font-size:0.8rem;color:var(--muted);margin-top:4px;">
+              判定方式: <strong id="lobbyDeclareMode">-</strong> ／
+              使用カード: <strong id="lobbyActorCount">-</strong>枚
+              <span id="lobbyCustomActorNote"></span>
+            </div>
           </div>
           <button class="btn btn-outline btn-sm" onclick="leaveRoom()">ルームを退出してホームへ</button>
         </div>
@@ -979,7 +1132,7 @@
                 📷
                 <input type="file" accept="image/*" class="hidden" onchange="sendChatPhoto(event)" />
               </label>
-              <input type="text" id="lobbyChatInput" placeholder=""
+              <input type="text" id="lobbyChatInput" placeholder="ルームチャット（@でメンション）"
                 oninput="handleChatInput('lobbyChatInput')" onkeydown="handleChatKeydown(event, 'lobbyChatInput')" />
               <button type="button" class="btn btn-primary btn-sm" style="width:auto;"
                 onclick="sendChat('lobbyChatInput')">送信</button>
@@ -1029,14 +1182,14 @@
         <div class="cards-row" id="fieldCardsRow"></div>
       </div>
 
-      <!-- 自分の操作エリア（観戦時は非表示にして全員手札エリアを表示） -->
+      <!-- 自分の操作エリア -->
       <div class="card-box" id="actionPanel">
         <h2 id="stepTitle">🎴 あなたの手札</h2>
         <div class="cards-row" id="handCardsRow"></div>
         <div id="animeSelectArea" class="hidden" style="margin-top:12px;"></div>
         <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;" id="controlButtons"></div>
         <p class="alert-msg" id="gameAlert"></p>
-        <p class="key-guide">⌨️ キーボード操作: [1]〜[9] 選択/ [0] スキップ / [a] 未登録作品として強制出し / [Esc] 選択解除</p>
+        <p class="key-guide">⌨️ キーボード操作: [1]〜[9] 選択 / [0] スキップ / [a] 未登録作品として強制出し / [Esc] 選択解除</p>
       </div>
 
       <!-- 観戦モード用：全プレイヤーの手札一覧 -->
@@ -1115,6 +1268,8 @@
 
     let allActorsMaster = [];
     let actorAnimesMaster = {};
+    let allAnimesMaster = [];
+    let customActorsList = [];
     let selectedActorSet = new Set();
     let onlineUsersList = [];
     let latestRoomsList = [];
@@ -1126,6 +1281,7 @@
     let selectedHandCard = null;
     let selectedFieldIdx = null;
     let currentAnimeOptions = [];
+    let declareAnimeText = "";
 
     const mentionState = {
       activeInputId: null,
@@ -1492,6 +1648,8 @@
         }
 
         const modeTxt = r.endlessMode ? "エンドレス" : "通常";
+        const judgeTxt = r.declareMode ? "宣言モード" : "選択モード";
+        const customTxt = r.customActorCount > 0 ? ` / 一時+${r.customActorCount}` : "";
         const descHtml = r.roomDesc ? `<div class="room-card-desc">${escapeHtml(r.roomDesc)}</div>` : "";
         html += `
           <div class="room-card">
@@ -1501,7 +1659,7 @@
             </div>
             ${descHtml}
             <div class="room-card-meta">
-              <span>👑 ホスト: <strong>${escapeHtml(r.hostName)}</strong> ／ 人間 ${r.humanCount}人 + AI ${r.aiCount}人 ／ ${modeTxt}（${r.actorCount}名）</span>
+              <span>👑 ホスト: <strong>${escapeHtml(r.hostName)}</strong> ／ 人間 ${r.humanCount}人 + AI ${r.aiCount}人 ／ ${modeTxt}・${judgeTxt}（${r.actorCount}枚${customTxt}）</span>
             </div>
             <button type="button" class="${btnClass}" style="width:100%;" onclick="joinRoomById('${escapeHtml(r.roomId)}')">${btnLabel}</button>
           </div>
@@ -1510,33 +1668,151 @@
       container.innerHTML = html;
     }
 
-    // --------- 声優一覧・声優名＆アニメ名検索・一括ON/OFF選択 ---------
+    // --------- 声優一覧・一時カード作成・コピペ一括入力 ---------
     fetch("/api/meta").then(r => r.json()).then(d => {
       allActorsMaster = d.actors || [];
       actorAnimesMaster = d.actorAnimes || {};
-      document.getElementById("maxActorSpan").textContent = allActorsMaster.length;
+      allAnimesMaster = d.allAnimes || [];
+      updateMaxActorCount();
       selectTopActors(220);
     });
 
+    function getCombinedActorsList() {
+      return [...customActorsList, ...allActorsMaster];
+    }
+
+    function updateMaxActorCount() {
+      document.getElementById("maxActorSpan").textContent = getCombinedActorsList().length;
+    }
+
+    function addCustomActor(rawName) {
+      const name = String(rawName || "").trim();
+      if (!name) return false;
+      if (allActorsMaster.includes(name) || customActorsList.includes(name)) {
+        selectedActorSet.add(name);
+        return false;
+      }
+      customActorsList.push(name);
+      selectedActorSet.add(name);
+      return true;
+    }
+
+    function addCustomActorFromInput() {
+      const inp = document.getElementById("customActorInput");
+      const val = inp.value.trim();
+      if (!val) return;
+      addCustomActor(val);
+      inp.value = "";
+      renderCustomActorChips();
+      updateMaxActorCount();
+      renderActorChecklist();
+    }
+
+    function removeCustomActor(idx) {
+      const removed = customActorsList[idx];
+      if (removed !== undefined) {
+        customActorsList.splice(idx, 1);
+        selectedActorSet.delete(removed);
+      }
+      renderCustomActorChips();
+      updateMaxActorCount();
+      renderActorChecklist();
+    }
+
+    function renderCustomActorChips() {
+      const container = document.getElementById("customActorChipList");
+      if (!container) return;
+      if (customActorsList.length === 0) {
+        container.innerHTML = "";
+        return;
+      }
+      let html = "";
+      customActorsList.forEach((name, idx) => {
+        html += `
+          <span class="custom-chip">
+            <span>${escapeHtml(name)}</span>
+            <button type="button" title="削除" onclick="removeCustomActor(${idx})">×</button>
+          </span>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function applyPastedActors(replaceMode) {
+      const ta = document.getElementById("pasteActorsTextarea");
+      const lines = (ta.value || "")
+        .split(/\r?\n/)
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      if (lines.length === 0) {
+        alert("改行区切りで名前を入力してください。");
+        return;
+      }
+
+      if (replaceMode) {
+        selectedActorSet.clear();
+        customActorsList = [];
+      }
+
+      const masterSet = new Set(allActorsMaster);
+      let existingMatched = 0;
+      let tempCreated = 0;
+
+      lines.forEach(name => {
+        if (masterSet.has(name)) {
+          selectedActorSet.add(name);
+          existingMatched++;
+        } else {
+          if (!customActorsList.includes(name)) {
+            customActorsList.push(name);
+            tempCreated++;
+          }
+          selectedActorSet.add(name);
+        }
+      });
+
+      renderCustomActorChips();
+      updateMaxActorCount();
+      renderActorChecklist();
+      alert(`反映しました！（既存リスト一致: ${existingMatched}名 / 一時カード作成: ${tempCreated}枚）`);
+    }
+
     function getFilteredActors() {
       const keyword = (document.getElementById("actorSearchInput").value || "").trim().toLowerCase();
+      const combined = getCombinedActorsList();
+      const customSet = new Set(customActorsList);
+
       if (!keyword) {
-        return allActorsMaster.map((actor, idx) => ({ actor, idx, matchedAnimes: [] }));
+        return combined.map((actor, idx) => ({
+          actor,
+          idx,
+          isCustom: customSet.has(actor),
+          matchedAnimes: []
+        }));
       }
       const results = [];
-      allActorsMaster.forEach((actor, idx) => {
+      combined.forEach((actor, idx) => {
         const nameMatch = actor.toLowerCase().includes(keyword);
         const animes = actorAnimesMaster[actor] || [];
         const matchedAnimes = animes.filter(title => title.toLowerCase().includes(keyword));
         if (nameMatch || matchedAnimes.length > 0) {
-          results.push({ actor, idx, matchedAnimes });
+          results.push({
+            actor,
+            idx,
+            isCustom: customSet.has(actor),
+            matchedAnimes
+          });
         }
       });
       return results;
     }
 
     function selectTopActors(n) {
-      selectedActorSet = new Set(allActorsMaster.slice(0, Math.min(n, allActorsMaster.length)));
+      selectedActorSet = new Set([
+        ...customActorsList,
+        ...allActorsMaster.slice(0, Math.min(n, allActorsMaster.length))
+      ]);
       renderActorChecklist();
     }
 
@@ -1567,9 +1843,10 @@
       document.getElementById("selectedActorCountSpan").textContent = selectedActorSet.size;
 
       let html = "";
-      filtered.forEach(({ actor, idx, matchedAnimes }) => {
+      filtered.forEach(({ actor, idx, isCustom, matchedAnimes }) => {
         const checked = selectedActorSet.has(actor);
         const safeName = escapeHtml(actor);
+        const tempBadge = isCustom ? `<span class="temp-badge-mini">一時</span>` : "";
         let animeHint = "";
         if (matchedAnimes.length > 0) {
           const preview = matchedAnimes.slice(0, 2).map(escapeHtml).join(" / ");
@@ -1581,7 +1858,7 @@
             <input type="checkbox" style="margin-top:3px;" ${checked ? "checked" : ""} onchange="toggleActorSelection(this.dataset.actor, this.checked); this.parentElement.classList.toggle('checked', this.checked);" data-actor="${safeName}" />
             <span class="actor-idx-num">${idx + 1}.</span>
             <span>
-              <span class="actor-name-txt">${safeName}</span>
+              <span class="actor-name-txt">${safeName}${tempBadge}</span>
               ${animeHint}
             </span>
           </label>
@@ -1913,6 +2190,7 @@
       selectedHandCard = null;
       selectedFieldIdx = null;
       currentAnimeOptions = [];
+      declareAnimeText = "";
       document.getElementById("gameAlert").textContent = "";
     }
 
@@ -1923,9 +2201,10 @@
         return;
       }
 
-      const orderedSelectedActors = allActorsMaster.filter(a => selectedActorSet.has(a));
+      const combined = getCombinedActorsList();
+      const orderedSelectedActors = combined.filter(a => selectedActorSet.has(a));
       if (orderedSelectedActors.length < 4) {
-        alert("使用する声優を4名以上選択してください。");
+        alert("使用するカードを4枚以上選択してください。");
         return;
       }
 
@@ -1947,9 +2226,11 @@
           roomName: document.getElementById("roomNameInput").value.trim(),
           roomDesc: document.getElementById("roomDescInput").value.trim(),
           endlessMode: document.getElementById("endlessSelect").value === "1",
+          declareMode: document.getElementById("declareModeSelect").value === "1",
           startHandSize: parseInt(document.getElementById("startHandInput").value) || 5,
           extraCard: parseInt(document.getElementById("extraCardInput").value) || 3,
           selectedActors: orderedSelectedActors,
+          customActors: customActorsList.slice(),
           aiList
         }
       });
@@ -1996,7 +2277,6 @@
       renderRoomChatBoxes(state.chatMessages);
 
       if (state.phase === "LOBBY") {
-        // ホスト・ゲスト問わず、LOBBY状態の部屋にいるときは必ず対戦ロビー画面を表示
         document.getElementById("homeView").classList.remove("hidden");
         document.getElementById("gameView").classList.add("hidden");
         document.getElementById("homeChatCard").classList.add("hidden");
@@ -2005,7 +2285,13 @@
 
         document.getElementById("lobbyRoomName").textContent = `🏠 ${state.roomName}`;
         document.getElementById("lobbyRoomDesc").textContent = state.roomDesc || "（説明なし）";
+        document.getElementById("lobbyDeclareMode").textContent =
+          state.settings.declareMode ? "宣言モード" : "選択モード";
         document.getElementById("lobbyActorCount").textContent = state.settings.selectedCount || "-";
+
+        const customList = state.settings.customActors || [];
+        document.getElementById("lobbyCustomActorNote").textContent =
+          customList.length > 0 ? `（うち一時カード ${customList.length}枚）` : "";
 
         const ul = document.getElementById("lobbyMemberList");
         ul.innerHTML = "";
@@ -2037,6 +2323,68 @@
       }
     }
 
+    // 宣言モード用：アニメ検索候補の更新・確定
+    function updateDeclareSuggestions() {
+      const box = document.getElementById("declareSuggestBox");
+      if (!box) return;
+      const q = declareAnimeText.trim().toLowerCase();
+      if (!q) {
+        box.innerHTML = "";
+        return;
+      }
+
+      const matches = allAnimesMaster
+        .filter(title => title.toLowerCase().includes(q))
+        .slice(0, 12);
+
+      if (matches.length === 0) {
+        box.innerHTML = `<div style="font-size:0.78rem;color:var(--muted);padding:4px;">DB未登録のアニメ名としてそのまま宣言できます</div>`;
+        return;
+      }
+
+      let html = "";
+      matches.forEach(title => {
+        const safeTitle = escapeHtml(title);
+        html += `
+          <button type="button" class="declare-suggest-item" data-anime="${safeTitle}" onclick="selectDeclareSuggestion(this.dataset.anime)">
+            <strong>🎬 ${safeTitle}</strong>
+            <span style="font-size:0.75rem;color:var(--primary);">選択</span>
+          </button>
+        `;
+      });
+      box.innerHTML = html;
+    }
+
+    function onDeclareAnimeInput(val) {
+      declareAnimeText = val;
+      updateDeclareSuggestions();
+    }
+
+    function selectDeclareSuggestion(animeTitle) {
+      declareAnimeText = animeTitle;
+      const inp = document.getElementById("declareAnimeInput");
+      if (inp) inp.value = animeTitle;
+      submitDeclarePlay();
+    }
+
+    function submitDeclarePlay() {
+      if (!state || state.phase !== "PLAYING" || state.myPid < 0 || state.currentPid !== state.myPid) return;
+      if (!selectedHandCard || selectedFieldIdx === null) return;
+      const anime = declareAnimeText.trim();
+      if (!anime) {
+        document.getElementById("gameAlert").textContent = "アニメ名を入力してください。";
+        return;
+      }
+      sendSafe({
+        action: "PLAY_CARD",
+        handCard: selectedHandCard,
+        fieldIdx: selectedFieldIdx,
+        anime,
+        forcePlay: false
+      });
+      resetSelection();
+    }
+
     function renderGame() {
       document.getElementById("gameRoomNameBadge").textContent = `🏠 ${state.roomName}`;
       document.getElementById("matchNum").textContent = state.matchCount;
@@ -2048,6 +2396,7 @@
       const curP = state.players[state.currentPid];
       const me = isSpectator ? null : state.players[state.myPid];
       const isMyTurn = state.phase === "PLAYING" && !isSpectator && state.currentPid === state.myPid;
+      const isDeclareMode = Boolean(state.settings.declareMode);
 
       document.getElementById("turnBanner").textContent =
         state.phase === "RESULT" ? "🏁 ゲーム終了" :
@@ -2089,7 +2438,7 @@
         }
       });
 
-      const canSelectField = isMyTurn && (uiStep === "SELECT_FIELD" || uiStep === "SELECT_ANIME");
+      const canSelectField = isMyTurn && (uiStep === "SELECT_FIELD" || uiStep === "SELECT_ANIME" || uiStep === "DECLARE_ANIME");
       const fieldRow = document.getElementById("fieldCardsRow");
       fieldRow.innerHTML = "";
       state.field.forEach((fc, idx) => {
@@ -2185,10 +2534,33 @@
         } else if (uiStep === "SELECT_FIELD") {
           stepTitle.textContent = `② 『${selectedHandCard}』を重ねる場のカードを選んでください`;
           let btns = `<button class="btn btn-outline" onclick="resetSelection();renderGame();">[Esc] 手札選択に戻る</button>`;
-          if (selectedFieldIdx !== null) {
+          if (!isDeclareMode && selectedFieldIdx !== null) {
             btns += `<button class="btn btn-force" onclick="forcePlayWildcard()">[a] 未登録作品として強制出し</button>`;
           }
           ctrlBtns.innerHTML = btns;
+        } else if (uiStep === "DECLARE_ANIME") {
+          const targetFieldName = state.field[selectedFieldIdx] || "";
+          stepTitle.textContent = `③ 『${selectedHandCard}』×『${targetFieldName}』で宣言するアニメ名を入力してください`;
+          animeArea.innerHTML = `
+            <div class="declare-box">
+              <div class="declare-input-row">
+                <input type="text" id="declareAnimeInput" value="${escapeHtml(declareAnimeText)}"
+                  placeholder="アニメ名を入力（候補検索／未登録名もそのまま入力可）..."
+                  oninput="onDeclareAnimeInput(this.value)"
+                  onkeydown="if(event.key==='Enter'){event.preventDefault();submitDeclarePlay();} else if(event.key==='Escape'){resetSelection();renderGame();}" />
+                <button type="button" class="btn btn-primary btn-sm" style="width:auto;white-space:nowrap;"
+                  onclick="submitDeclarePlay()">決定して場に出す</button>
+              </div>
+              <div id="declareSuggestBox" class="declare-suggest-list"></div>
+            </div>
+          `;
+          animeArea.classList.remove("hidden");
+          ctrlBtns.innerHTML = `<button class="btn btn-outline" onclick="resetSelection();renderGame();">[Esc] 選択を解除</button>`;
+          updateDeclareSuggestions();
+          setTimeout(() => {
+            const inp = document.getElementById("declareAnimeInput");
+            if (inp) inp.focus();
+          }, 0);
         } else if (uiStep === "SELECT_ANIME") {
           stepTitle.textContent = "③ 共演アニメを選んでください";
           let html = "";
@@ -2229,6 +2601,7 @@
       selectedHandCard = me.hand[idx];
       selectedFieldIdx = null;
       currentAnimeOptions = [];
+      declareAnimeText = "";
       uiStep = "SELECT_FIELD";
       document.getElementById("gameAlert").textContent = "";
       renderGame();
@@ -2236,14 +2609,20 @@
 
     function onSelectField(fIdx) {
       if (!state || state.phase !== "PLAYING" || state.myPid < 0 || state.currentPid !== state.myPid) return;
-      if (uiStep !== "SELECT_FIELD" && uiStep !== "SELECT_ANIME") return;
+      if (uiStep !== "SELECT_FIELD" && uiStep !== "SELECT_ANIME" && uiStep !== "DECLARE_ANIME") return;
       if (!selectedHandCard) return;
 
       selectedFieldIdx = fIdx;
       currentAnimeOptions = [];
       document.getElementById("gameAlert").textContent = "";
-      renderGame();
 
+      if (state.settings.declareMode) {
+        uiStep = "DECLARE_ANIME";
+        renderGame();
+        return;
+      }
+
+      renderGame();
       sendSafe({
         action: "CHECK_ANIME",
         handCard: selectedHandCard,
@@ -2294,7 +2673,8 @@
     }
 
     document.addEventListener("keydown", (e) => {
-      if (document.activeElement.tagName === "INPUT") return;
+      const tag = document.activeElement ? document.activeElement.tagName : "";
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
       if (!state || state.phase !== "PLAYING" || state.myPid < 0 || state.currentPid !== state.myPid) return;
 
       if (e.key === "Escape") {
@@ -2303,7 +2683,7 @@
         return;
       }
       if (e.key.toLowerCase() === "a") {
-        if ((uiStep === "SELECT_FIELD" || uiStep === "SELECT_ANIME") && selectedHandCard && selectedFieldIdx !== null) {
+        if (!state.settings.declareMode && (uiStep === "SELECT_FIELD" || uiStep === "SELECT_ANIME") && selectedHandCard && selectedFieldIdx !== null) {
           forcePlayWildcard();
         }
         return;
@@ -2316,7 +2696,7 @@
         const idx = parseInt(e.key) - 1;
         if (uiStep === "SELECT_HAND" || uiStep === "SELECT_DISCARD") {
           onSelectHand(idx);
-        } else if (uiStep === "SELECT_FIELD") {
+        } else if (uiStep === "SELECT_FIELD" || uiStep === "DECLARE_ANIME") {
           onSelectField(idx);
         } else if (uiStep === "SELECT_ANIME") {
           confirmPlay(idx);
