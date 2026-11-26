@@ -1027,8 +1027,8 @@
             <div class="form-row">
               <label>アニメ判定方式</label>
               <select id="declareModeSelect">
-                <option value="0">選択モード（DB共演判定）</option>
-                <option value="1">宣言モード（自由重ね＋作品宣言）</option>
+                <option value="0">選択モード</option>
+                <option value="1">宣言モード</option>
               </select>
             </div>
           </div>
@@ -1055,7 +1055,7 @@
             <div class="actor-selector-box">
               <!-- 一時カード追加 -->
               <div class="sub-panel">
-                <div class="sub-panel-title">✨ 一時カードを作成（部屋解散時に自動削除 / 何枚でも可）</div>
+                <div class="sub-panel-title">✨ 一時カードを作成</div>
                 <div class="inline-add-row">
                   <input type="text" id="customActorInput" placeholder="追加したい名前を入力..."
                     onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomActorFromInput();}" />
@@ -1066,7 +1066,7 @@
 
               <!-- 改行コピペ一括入力 -->
               <div class="sub-panel">
-                <div class="sub-panel-title">📋 コピペ一括選択・作成（1行に1名／DBにない名前は一時カードとして自動作成）</div>
+                <div class="sub-panel-title">📋 コピペ一括選択・作成</div>
                 <textarea id="pasteActorsTextarea" rows="3" placeholder="例:&#10;声優A&#10;声優B&#10;声優C"></textarea>
                 <div style="display:flex; gap:6px; margin-top:5px;">
                   <button type="button" class="btn btn-outline btn-xs"
