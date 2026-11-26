@@ -25,6 +25,7 @@ print("Excelファイルを省メモリモードで読み込んでいます...")
 character_map: Dict[str, Dict[str, List[str]]] = {}
 actor_animes_map: Dict[str, List[str]] = {}
 all_actors: List[str] = []
+all_animes_set: Set[str] = set()
 
 wb_char = openpyxl.load_workbook(CHARACTER_FILE, read_only=True, data_only=True)
 ws_char = wb_char.active
@@ -34,6 +35,9 @@ header_row = next(char_rows, None)
 anime_titles_for_char = [
     str(c).strip() if c is not None else "" for c in (header_row[1:] if header_row else [])
 ]
+for t in anime_titles_for_char:
+    if t and t not in ("nan", "NaN", "None"):
+        all_animes_set.add(t)
 
 # 1行目（放送年行など）をスキップ
 next(char_rows, None)
@@ -95,6 +99,9 @@ for row in co_rows:
         if not animes:
             continue
 
+        for a in animes:
+            all_animes_set.add(a)
+
         key_dir = (a1, a2)
         if key_dir not in all_coappear_full:
             all_coappear_full[key_dir] = animes
@@ -106,6 +113,9 @@ for row in co_rows:
             unique_occurrences_set.add((s_key[0], s_key[1], anime))
 
 wb_co.close()
+
+all_animes: List[str] = sorted(list(all_animes_set))
+del all_animes_set
 
 unique_occurrences_full = list(unique_occurrences_set)
 del unique_occurrences_set
@@ -127,12 +137,12 @@ for anime in anime_max_coactor_map:
     if anime_max_coactor_map[anime] <= 0:
         anime_max_coactor_map[anime] = 1
 
-print(f"読み込み完了！ (全声優数: {len(all_actors)}名)")
+print(f"読み込み完了！ (全声優数: {len(all_actors)}名 / 全アニメ数: {len(all_animes)}作)")
 
 
 def get_first_character(anime: str, actor: str) -> str:
     roles = character_map.get(anime, {}).get(actor, [])
-    return roles[0] if roles else "？"
+    return roles[0] if roles else ""
 
 
 # --------- グローバル接続ユーザー＆全体チャット管理 ---------
@@ -193,6 +203,8 @@ def get_room_list_data() -> List[dict]:
     res = []
     for rid, room in rooms.items():
         host_name = next((h["name"] for h in room.lobby_humans if h["id"] == room.host_id), "ホスト")
+        selected_count = len(room.settings.get("selectedActors") or [])
+        custom_count = len(room.custom_actors)
         res.append({
             "roomId": rid,
             "roomName": room.room_name,
@@ -203,7 +215,9 @@ def get_room_list_data() -> List[dict]:
             "humanCount": len(room.lobby_humans),
             "aiCount": len(room.ai_configs),
             "endlessMode": bool(room.settings.get("endlessMode", False)),
-            "actorCount": len(room.settings.get("selectedActors") or []),
+            "declareMode": bool(room.settings.get("declareMode", False)),
+            "actorCount": selected_count,
+            "customActorCount": custom_count,
             "matchCount": room.match_count,
         })
     return res
@@ -276,6 +290,16 @@ class GameRoom:
         self.match_count = 0
         self.chat_messages: List[dict] = []
 
+        # この部屋限りの一時カードリスト（部屋削除で破棄）
+        raw_custom = settings.get("customActors") or []
+        seen_c: Set[str] = set()
+        self.custom_actors: List[str] = []
+        for c in raw_custom:
+            name_c = str(c).strip()[:60]
+            if name_c and name_c not in seen_c:
+                seen_c.add(name_c)
+                self.custom_actors.append(name_c)
+
         self.players: List[dict] = []
         self.voice_actors: List[str] = []
         self.deck: List[str] = []
@@ -340,15 +364,22 @@ class GameRoom:
     def start_game(self):
         self.match_count += 1
         selected_list = self.settings.get("selectedActors")
+        valid_set = set(all_actors) | set(self.custom_actors)
         if isinstance(selected_list, list) and len(selected_list) >= 4:
-            valid_set = set(all_actors)
-            self.voice_actors = [a for a in selected_list if a in valid_set]
+            seen_va: Set[str] = set()
+            merged: List[str] = []
+            for a in selected_list:
+                a_str = str(a).strip()
+                if a_str in valid_set and a_str not in seen_va:
+                    seen_va.add(a_str)
+                    merged.append(a_str)
+            self.voice_actors = merged
         else:
             limit = max(4, min(int(self.settings.get("actorLimit", 220)), len(all_actors)))
-            self.voice_actors = all_actors[:limit]
+            self.voice_actors = list(dict.fromkeys(all_actors[:limit] + self.custom_actors))
 
         if len(self.voice_actors) < 4:
-            self.voice_actors = all_actors[:min(220, len(all_actors))]
+            self.voice_actors = list(dict.fromkeys(all_actors[:min(220, len(all_actors))] + self.custom_actors))
 
         for h in self.lobby_humans:
             if h["id"] in connected_users:
@@ -423,7 +454,11 @@ class GameRoom:
 
         self.field = [c for _ in range(3) if (c := self.draw_card())]
         self.phase = "PLAYING"
-        self.add_log(f"第{self.match_count}戦 開始！（使用声優: {len(self.voice_actors)}名 / 順番シャッフル済）")
+        mode_label = "宣言モード" if self.settings.get("declareMode", False) else "選択モード"
+        custom_note = f" / 一時カード: {len(self.custom_actors)}枚" if self.custom_actors else ""
+        self.add_log(
+            f"第{self.match_count}戦 開始！（{mode_label} / 使用カード: {len(self.voice_actors)}枚{custom_note} / 順番シャッフル済）"
+        )
 
     def get_state_for_client(self, client_id: str) -> dict:
         my_pid = next(
@@ -464,10 +499,12 @@ class GameRoom:
             "matchCount": self.match_count,
             "canSeeAllHands": can_see_all_hands,
             "settings": {
-                "endlessMode": self.settings.get("endlessMode", False),
+                "endlessMode": bool(self.settings.get("endlessMode", False)),
+                "declareMode": bool(self.settings.get("declareMode", False)),
                 "startHandSize": self.settings.get("startHandSize", 5),
                 "extraCard": self.settings.get("extraCard", 3),
                 "selectedCount": len(self.settings.get("selectedActors") or []),
+                "customActors": self.custom_actors,
             },
             "lobbyHumans": self.lobby_humans,
             "aiConfigs": self.ai_configs,
@@ -612,8 +649,8 @@ class GameRoom:
         if best_move:
             h, f_idx, anime = best_move
             target = self.field[f_idx]
-            r1 = get_first_character(anime, h)
-            r2 = get_first_character(anime, target)
+            r1 = get_first_character(anime, h) or "？"
+            r2 = get_first_character(anime, target) or "？"
             self.add_log(f"{p['name']}: {h}（{r1}）を {target}（{r2}）に重ね『{anime}』を宣言")
             self.field[f_idx] = h
             hand.remove(h)
@@ -699,6 +736,8 @@ async def remove_user_from_room(client_id: str, room: GameRoom):
         connected_users[client_id]["room_id"] = None
 
     if not room.lobby_humans and not room.connections:
+        # 部屋が空になったら一時カード情報ごと完全に破棄
+        room.custom_actors.clear()
         rooms.pop(room.room_id, None)
         await broadcast_online_users()
         await broadcast_room_list()
@@ -727,6 +766,7 @@ async def get_meta():
         "totalActors": len(all_actors),
         "actors": all_actors,
         "actorAnimes": actor_animes_map,
+        "allAnimes": all_animes,
     }
 
 
@@ -747,7 +787,10 @@ async def websocket_endpoint(ws: WebSocket):
                 continue
 
             if action == "REGISTER_USER":
-                client_id = data["clientId"]
+                incoming_id = str(data.get("clientId", "")).strip()
+                if not incoming_id:
+                    continue
+                client_id = incoming_id
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
                 avatar = data.get("avatar", "")[:35000]
                 is_first_login = bool(data.get("isFirstLogin", False))
@@ -787,7 +830,8 @@ async def websocket_endpoint(ws: WebSocket):
                 continue
 
             if action == "UPDATE_PROFILE":
-                client_id = data["clientId"]
+                if not client_id:
+                    client_id = str(data.get("clientId", "")).strip()
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
                 avatar = data.get("avatar", "")[:35000]
                 if client_id in connected_users:
@@ -824,11 +868,12 @@ async def websocket_endpoint(ws: WebSocket):
                 continue
 
             if action == "CREATE_ROOM":
-                client_id = data["clientId"]
+                if not client_id:
+                    client_id = str(data.get("clientId", "")).strip()
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
                 avatar = data.get("avatar", "")[:35000]
 
-                # 1人1部屋まで制限（すでに部屋を立てている／入室している場合は拒否）
+                # 1人1部屋まで制限
                 existing_hosted = next((r for r in rooms.values() if r.host_id == client_id), None)
                 if existing_hosted:
                     await ws.send_text(
@@ -867,7 +912,8 @@ async def websocket_endpoint(ws: WebSocket):
                 await room.broadcast()
 
             elif action == "JOIN_ROOM":
-                client_id = data["clientId"]
+                if not client_id:
+                    client_id = str(data.get("clientId", "")).strip()
                 rid = data.get("roomId", "").strip()
                 name = data.get("playerName", "").strip() or f"プレイヤー_{client_id[-4:]}"
                 avatar = data.get("avatar", "")[:35000]
@@ -877,7 +923,6 @@ async def websocket_endpoint(ws: WebSocket):
                     await ws.send_text(json.dumps({"type": "ROOM_LIST", "rooms": get_room_list_data()}, ensure_ascii=False))
                     continue
 
-                # 別の部屋にいた場合は自動退出してから入室
                 if current_room and current_room.room_id != rid and current_room.room_id in rooms:
                     await remove_user_from_room(client_id, current_room)
                     current_room = None
@@ -908,7 +953,8 @@ async def websocket_endpoint(ws: WebSocket):
                 await room.broadcast()
 
             elif action == "LEAVE_ROOM":
-                client_id = data.get("clientId", client_id)
+                if not client_id:
+                    client_id = str(data.get("clientId", "")).strip()
                 if current_room:
                     room_to_leave = current_room
                     current_room = None
@@ -919,7 +965,9 @@ async def websocket_endpoint(ws: WebSocket):
                 continue
 
             elif action == "RECONNECT":
-                client_id = data.get("clientId", "")
+                incoming_id = str(data.get("clientId", "")).strip()
+                if incoming_id:
+                    client_id = incoming_id
                 rid = data.get("roomId", "")
                 name = data.get("playerName", "").strip()
                 avatar = data.get("avatar", "")[:35000]
@@ -968,8 +1016,8 @@ async def websocket_endpoint(ws: WebSocket):
                 options = [
                     {
                         "anime": a,
-                        "roleHand": get_first_character(a, hand_card),
-                        "roleField": get_first_character(a, field_card),
+                        "roleHand": get_first_character(a, hand_card) or "？",
+                        "roleField": get_first_character(a, field_card) or "？",
                     }
                     for a in animes
                 ]
@@ -987,20 +1035,41 @@ async def websocket_endpoint(ws: WebSocket):
                     continue
                 hand_card = data["handCard"]
                 field_idx = int(data["fieldIdx"])
-                anime = data["anime"]
+                if not (0 <= field_idx < len(current_room.field)):
+                    continue
+
+                anime = str(data.get("anime", "")).strip()[:100]
                 force_play = bool(data.get("forcePlay", False))
+                declare_mode = bool(current_room.settings.get("declareMode", False))
                 target = current_room.field[field_idx]
 
-                if hand_card in p["hand"] and (
-                    force_play or anime in current_room.find_common_anime(hand_card, target, pid)
-                ):
+                if hand_card not in p["hand"]:
+                    continue
+
+                if declare_mode:
+                    if not anime:
+                        continue
+                    r1 = get_first_character(anime, hand_card)
+                    r2 = get_first_character(anime, target)
+                    h_disp = f"{hand_card}（{r1}）" if r1 else hand_card
+                    t_disp = f"{target}（{r2}）" if r2 else target
+                    current_room.add_log(f"{p['name']}: {h_disp} を {t_disp} に重ね『{anime}』を宣言")
+                    current_room.used_anime.add(anime)
+                    p["usedAnime"].append(anime)
+                    current_room.field[field_idx] = hand_card
+                    p["hand"].remove(hand_card)
+                    current_room.acted_in_round = True
+                    current_room.check_victory_and_advance()
+                    await current_room.broadcast()
+                    asyncio.create_task(run_ai_turns_if_needed(current_room))
+                elif force_play or anime in current_room.find_common_anime(hand_card, target, pid):
                     if force_play:
                         display_anime = "未登録作品（強制出し）"
                         current_room.add_log(f"{p['name']}: {hand_card} を {target} に重ね『{display_anime}』を宣言")
                         p["usedAnime"].append(f"{hand_card}×{target}(未登録)")
                     else:
-                        r1 = get_first_character(anime, hand_card)
-                        r2 = get_first_character(anime, target)
+                        r1 = get_first_character(anime, hand_card) or "？"
+                        r2 = get_first_character(anime, target) or "？"
                         current_room.add_log(f"{p['name']}: {hand_card}（{r1}）を {target}（{r2}）に重ね『{anime}』を宣言")
                         current_room.used_anime.add(anime)
                         p["usedAnime"].append(anime)
