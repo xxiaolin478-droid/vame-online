@@ -2,13 +2,11 @@ import asyncio
 import datetime
 import gc
 import json
-import os
 import random
 import string
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-import httpx
 import openpyxl
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
@@ -20,7 +18,6 @@ BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 COAPPEAR_FILE = BASE_DIR / "共演表.xlsx"
 CHARACTER_FILE = BASE_DIR / "キャラ表2.xlsx"
-GAS_WEBHOOK_URL = os.environ.get("GAS_WEBHOOK_URL", "").strip()
 
 # --------- 起動時にExcelを省メモリモード（openpyxl read_only）で読み込み ---------
 print("Excelファイルを省メモリモードで読み込んでいます...")
@@ -432,7 +429,6 @@ class GameRoom:
             (i for i, p in enumerate(self.players) if p["id"] == client_id and not p.get("leftRoom")),
             -1,
         )
-        # 観戦者（my_pid == -1）、すでに上がり/脱落済みのプレイヤー、または結果画面なら全員の手札を見られる
         can_see_all_hands = (
             self.phase == "RESULT"
             or my_pid < 0
@@ -507,10 +503,21 @@ class GameRoom:
                 pass
 
     def finish_game_and_assign_ranks(self, reason_log: str):
-        active = [x for x in self.players if not x["finished"]]
+        # 1. 途中退出していない残存プレイヤー（人間・AI）に順位をつける
+        active = [x for x in self.players if not x["finished"] and not x.get("leftRoom")]
         for rem in active:
             rem["finished"] = True
-            rem["rank"] = sum(1 for x in self.players if x["finished"])
+            rem["rank"] = sum(1 for x in self.players if x["finished"] and not x.get("leftRoom"))
+
+        # 2. 途中退出したプレイヤーはAIより下の最下位（退出者同士は同順位）にする
+        leavers = [x for x in self.players if x.get("leftRoom")]
+        if leavers:
+            non_leaver_count = sum(1 for x in self.players if not x.get("leftRoom"))
+            bottom_rank = non_leaver_count + 1
+            for lv in leavers:
+                lv["finished"] = True
+                lv["rank"] = bottom_rank
+
         self.phase = "RESULT"
         self.add_log(reason_log)
 
@@ -522,18 +529,18 @@ class GameRoom:
         n = len(self.players)
 
         p = self.players[self.current_pid]
-        if not endless and len(p["hand"]) == 0 and not p["finished"]:
+        if not endless and len(p["hand"]) == 0 and not p["finished"] and not p.get("leftRoom"):
             p["finished"] = True
-            p["rank"] = sum(1 for x in self.players if x["finished"])
+            p["rank"] = sum(1 for x in self.players if x["finished"] and not x.get("leftRoom"))
             self.add_log(f"🏆 {p['name']} が手札を使い切り {p['rank']}位 で上がり！")
 
         if endless:
             drawn = self.draw_card()
             if drawn:
                 p["hand"].append(drawn)
-            if len(p["hand"]) >= end_limit and not p["finished"]:
+            if len(p["hand"]) >= end_limit and not p["finished"] and not p.get("leftRoom"):
                 p["finished"] = True
-                p["rank"] = sum(1 for x in self.players if x["finished"])
+                p["rank"] = sum(1 for x in self.players if x["finished"] and not x.get("leftRoom"))
                 self.add_log(f"💀 上限 {end_limit} 枚到達: {p['name']} が脱落 ({p['rank']}位)")
 
             if self.is_deck_completely_empty():
@@ -662,31 +669,6 @@ async def get_meta():
         "actors": all_actors,
         "actorAnimes": actor_animes_map,
     }
-
-
-@app.post("/api/request_anime")
-async def request_anime(payload: dict):
-    anime = str(payload.get("anime", "")).strip()[:100]
-    note = str(payload.get("note", "")).strip()[:300]
-    sender = str(payload.get("sender", "匿名")).strip()
-
-    if not anime:
-        return {"ok": False, "message": "アニメ名を入力してください。"}
-
-    if not GAS_WEBHOOK_URL:
-        print(f"[作品追加リクエスト(未連携)] 送信者:{sender} / 作品:{anime} / メモ:{note}")
-        return {"ok": True, "message": "リクエストを受け付けました！"}
-
-    try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=10.0) as client:
-            await client.post(
-                GAS_WEBHOOK_URL,
-                json={"sender": sender, "anime": anime, "note": note},
-            )
-        return {"ok": True, "message": "運営のスプレッドシートにリクエストを送信しました！"}
-    except Exception as e:
-        print("GAS送信エラー:", e)
-        return {"ok": False, "message": "送信に失敗しました。時間をおいて再度お試しください。"}
 
 
 @app.websocket("/ws")
@@ -862,10 +844,15 @@ async def websocket_endpoint(ws: WebSocket):
                     for p in current_room.players:
                         if p["id"] == client_id and not p.get("leftRoom"):
                             p["leftRoom"] = True
-                            if not p["finished"]:
-                                p["finished"] = True
-                                p["rank"] = sum(1 for x in current_room.players if x["finished"])
-                            current_room.add_log(f"🚪 {p['name']} がルームを退出しました。")
+                            p["finished"] = True
+                            p["rank"] = len(current_room.players)
+                            current_room.add_log(f"🚪 {p['name']} がルームを退出しました（最下位扱い）。")
+
+                    leavers = [x for x in current_room.players if x.get("leftRoom")]
+                    if leavers:
+                        non_leaver_count = sum(1 for x in current_room.players if not x.get("leftRoom"))
+                        for lv in leavers:
+                            lv["rank"] = non_leaver_count + 1
 
                     current_room.add_chat("system", "システム", "", f"🚪 {leaver_name} さんが退室しました", is_system=True)
 
